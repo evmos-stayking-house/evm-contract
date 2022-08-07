@@ -1,12 +1,74 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
-    "/Users/chris/Workspace/sooho/hackerton/modules/defi-contracts/contracts/Lock.sol": {
-      "lastModificationDate": 1659007387003,
-      "contentHash": "6b2b4e5f78898e06c05af92d32436ca9",
-      "sourceName": "contracts/Lock.sol",
+    "/Users/chris/Workspace/sooho/stayking-finance/submodules/defi-contract/contracts/CoinPricingOracle.sol": {
+      "lastModificationDate": 1659863661270,
+      "contentHash": "481e42efdd4a4436dd222d4104b407e9",
+      "sourceName": "contracts/CoinPricingOracle.sol",
       "solcConfig": {
-        "version": "0.8.9",
+        "version": "0.8.0",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [],
+      "artifacts": []
+    },
+    "/Users/chris/Workspace/sooho/stayking-finance/submodules/defi-contract/contracts/libs/provableAPI.sol": {
+      "lastModificationDate": 1659863661269,
+      "contentHash": "e528dd3145e6823e63d4059f5e578b33",
+      "sourceName": "contracts/libs/provableAPI.sol",
+      "solcConfig": {
+        "version": "0.8.0",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [],
+      "artifacts": []
+    },
+    "/Users/chris/Workspace/sooho/stayking-finance/submodules/defi-contract/contracts/InterestBearingToken.sol": {
+      "lastModificationDate": 1659857845496,
+      "contentHash": "67f445ae7c37276c3a8a9b3b29ffbe3b",
+      "sourceName": "contracts/InterestBearingToken.sol",
+      "solcConfig": {
+        "version": "0.6.0",
         "settings": {
           "optimizer": {
             "enabled": false,
@@ -29,21 +91,60 @@
         }
       },
       "imports": [
-        "hardhat/console.sol"
+        "@openzeppelin/contracts/token/ERC20/ERC20.sol"
       ],
       "versionPragmas": [
-        "^0.8.9"
+        ">=0.6.0 <0.8.0"
       ],
       "artifacts": [
-        "Lock"
+        "InterestBearingToken"
       ]
     },
-    "/Users/chris/Workspace/sooho/hackerton/modules/defi-contracts/node_modules/hardhat/console.sol": {
-      "lastModificationDate": 1659007325420,
-      "contentHash": "cc4777addd464ea56fa35b1c45df0591",
-      "sourceName": "hardhat/console.sol",
+    "/Users/chris/Workspace/sooho/stayking-finance/submodules/defi-contract/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol": {
+      "lastModificationDate": 1659681318324,
+      "contentHash": "8065b340476f61365c076897199425f1",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/ERC20.sol",
       "solcConfig": {
-        "version": "0.8.9",
+        "version": "0.6.0",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../../utils/Context.sol",
+        "./IERC20.sol",
+        "../../math/SafeMath.sol"
+      ],
+      "versionPragmas": [
+        ">=0.6.0 <0.8.0"
+      ],
+      "artifacts": [
+        "ERC20"
+      ]
+    },
+    "/Users/chris/Workspace/sooho/stayking-finance/submodules/defi-contract/node_modules/@openzeppelin/contracts/utils/Context.sol": {
+      "lastModificationDate": 1659681318314,
+      "contentHash": "2adbd82f6d055a4751566d4671512b03",
+      "sourceName": "@openzeppelin/contracts/utils/Context.sol",
+      "solcConfig": {
+        "version": "0.6.0",
         "settings": {
           "optimizer": {
             "enabled": false,
@@ -67,10 +168,266 @@
       },
       "imports": [],
       "versionPragmas": [
-        ">=0.4.22 <0.9.0"
+        ">=0.6.0 <0.8.0"
       ],
       "artifacts": [
-        "console"
+        "Context"
+      ]
+    },
+    "/Users/chris/Workspace/sooho/stayking-finance/submodules/defi-contract/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol": {
+      "lastModificationDate": 1659863950197,
+      "contentHash": "3ede7434ac7b6165c887d2d090707658",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+      "solcConfig": {
+        "version": "0.6.0",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.6.0 <0.8.0"
+      ],
+      "artifacts": [
+        "IERC20"
+      ]
+    },
+    "/Users/chris/Workspace/sooho/stayking-finance/submodules/defi-contract/node_modules/@openzeppelin/contracts/math/SafeMath.sol": {
+      "lastModificationDate": 1659681318314,
+      "contentHash": "e03e12206057e809eb76c5f681170c32",
+      "sourceName": "@openzeppelin/contracts/math/SafeMath.sol",
+      "solcConfig": {
+        "version": "0.6.0",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.6.0 <0.8.0"
+      ],
+      "artifacts": [
+        "SafeMath"
+      ]
+    },
+    "/Users/chris/Workspace/sooho/stayking-finance/submodules/defi-contract/contracts/StayKingLendingPool.sol": {
+      "lastModificationDate": 1659865075669,
+      "contentHash": "949c418e76484615e5d212a45a625c53",
+      "sourceName": "contracts/StayKingLendingPool.sol",
+      "solcConfig": {
+        "version": "0.6.0",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "@openzeppelin/contracts/access/Ownable.sol",
+        "@openzeppelin/contracts/utils/Pausable.sol",
+        "@openzeppelin/contracts/math/SafeMath.sol"
+      ],
+      "versionPragmas": [
+        ">=0.6.0 <0.8.0"
+      ],
+      "artifacts": [
+        "StayKingLendingPool"
+      ]
+    },
+    "/Users/chris/Workspace/sooho/stayking-finance/submodules/defi-contract/node_modules/@openzeppelin/contracts/access/Ownable.sol": {
+      "lastModificationDate": 1659681318314,
+      "contentHash": "6748815a5b45c4aeeda56819f41190e0",
+      "sourceName": "@openzeppelin/contracts/access/Ownable.sol",
+      "solcConfig": {
+        "version": "0.6.0",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../utils/Context.sol"
+      ],
+      "versionPragmas": [
+        ">=0.6.0 <0.8.0"
+      ],
+      "artifacts": [
+        "Ownable"
+      ]
+    },
+    "/Users/chris/Workspace/sooho/stayking-finance/submodules/defi-contract/node_modules/@openzeppelin/contracts/utils/Pausable.sol": {
+      "lastModificationDate": 1659681318314,
+      "contentHash": "6960b40911542e6004ab95031ef9c3b9",
+      "sourceName": "@openzeppelin/contracts/utils/Pausable.sol",
+      "solcConfig": {
+        "version": "0.6.0",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./Context.sol"
+      ],
+      "versionPragmas": [
+        ">=0.6.0 <0.8.0"
+      ],
+      "artifacts": [
+        "Pausable"
+      ]
+    },
+    "/Users/chris/Workspace/sooho/stayking-finance/submodules/defi-contract/contracts/StayKingVault.sol": {
+      "lastModificationDate": 1659864981160,
+      "contentHash": "0ba002e6683b5d03b5cf6bd647a7261f",
+      "sourceName": "contracts/StayKingVault.sol",
+      "solcConfig": {
+        "version": "0.6.0",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/access/Ownable.sol"
+      ],
+      "versionPragmas": [
+        ">=0.6.0 <0.8.0"
+      ],
+      "artifacts": [
+        "StayKingVault"
+      ]
+    },
+    "/Users/chris/Workspace/sooho/stayking-finance/submodules/defi-contract/contracts/StayKingLeveragedPool.sol": {
+      "lastModificationDate": 1659864548658,
+      "contentHash": "e558bce30dd2cf67b8a768cca8cdac2d",
+      "sourceName": "contracts/StayKingLeveragedPool.sol",
+      "solcConfig": {
+        "version": "0.6.0",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.6.0 <0.8.0"
+      ],
+      "artifacts": [
+        "StayKingLeveragedPool"
       ]
     }
   }

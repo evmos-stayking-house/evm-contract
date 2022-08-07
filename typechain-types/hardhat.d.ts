@@ -13,15 +13,78 @@ import * as Contracts from ".";
 declare module "hardhat/types/runtime" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
     getContractFactory(
-      name: "Lock",
+      name: "Ownable",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.Lock__factory>;
+    ): Promise<Contracts.Ownable__factory>;
+    getContractFactory(
+      name: "ERC20",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC20__factory>;
+    getContractFactory(
+      name: "IERC20",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC20__factory>;
+    getContractFactory(
+      name: "Pausable",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Pausable__factory>;
+    getContractFactory(
+      name: "InterestBearingToken",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.InterestBearingToken__factory>;
+    getContractFactory(
+      name: "StayKingLendingPool",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.StayKingLendingPool__factory>;
+    getContractFactory(
+      name: "StayKingLeveragedPool",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.StayKingLeveragedPool__factory>;
+    getContractFactory(
+      name: "StayKingVault",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.StayKingVault__factory>;
 
     getContractAt(
-      name: "Lock",
+      name: "Ownable",
       address: string,
       signer?: ethers.Signer
-    ): Promise<Contracts.Lock>;
+    ): Promise<Contracts.Ownable>;
+    getContractAt(
+      name: "ERC20",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ERC20>;
+    getContractAt(
+      name: "IERC20",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC20>;
+    getContractAt(
+      name: "Pausable",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Pausable>;
+    getContractAt(
+      name: "InterestBearingToken",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.InterestBearingToken>;
+    getContractAt(
+      name: "StayKingLendingPool",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.StayKingLendingPool>;
+    getContractAt(
+      name: "StayKingLeveragedPool",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.StayKingLeveragedPool>;
+    getContractAt(
+      name: "StayKingVault",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.StayKingVault>;
 
     // default types
     getContractFactory(

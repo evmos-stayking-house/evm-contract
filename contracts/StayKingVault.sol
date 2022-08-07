@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.6.0 <0.8.0;
 
-import "./libs/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract StayKingVault is Ownable {
     mapping(address => uint) public delegators;
@@ -12,12 +12,12 @@ contract StayKingVault is Ownable {
     event SweepCoin(address validator, uint amount, uint when);
     event NewMasterWallet(address masterWallet, uint when);
 
-    constructor (address _masterWallet) {
+    constructor (address _masterWallet) public {
         minimumStakeCoin = 0.1 ether;
-        masterWallet = _masterWallet;
+        masterWallet = payable(_masterWallet);
     }
 
-    function stake() public {
+    function stake() public payable {
         require(msg.value < 0.1 ether, "the balance of staking is bigger than 0.1 aevmos");
         delegators[payable(msg.sender)] += msg.value;
         emit Staked(address(msg.sender), delegators[address(msg.sender)], block.timestamp);
