@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity >=0.6.0 <0.8.0;
 
 import "./libs/Ownable.sol";
 
-contract SimpleDelegating is Ownable {
-    mapping(address payable => uint) public delegators;
+contract StayKingVault is Ownable {
+    mapping(address => uint) public delegators;
     uint public minimumStakeCoin;
     address payable public masterWallet;
 
@@ -12,7 +12,7 @@ contract SimpleDelegating is Ownable {
     event SweepCoin(address validator, uint amount, uint when);
     event NewMasterWallet(address masterWallet, uint when);
 
-    constructor (address payable _masterWallet) {
+    constructor (address _masterWallet) {
         minimumStakeCoin = 0.1 ether;
         masterWallet = _masterWallet;
     }
@@ -32,8 +32,8 @@ contract SimpleDelegating is Ownable {
         // TBD...
     }
 
-    function setMotherWallet(address payable _newMotherWallet) public onlyOwner {
-        masterWallet = _newMotherWallet;
+    function setMasterWallet(address payable _newMasterWallet) public onlyOwner {
+        masterWallet = _newMasterWallet;
         emit NewMasterWallet(masterWallet, block.timestamp);
     }
 
