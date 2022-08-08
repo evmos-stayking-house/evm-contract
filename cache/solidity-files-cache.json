@@ -358,46 +358,9 @@
         "Pausable"
       ]
     },
-    "/Users/chris/Workspace/sooho/stayking-finance/submodules/defi-contract/contracts/StayKingVault.sol": {
-      "lastModificationDate": 1659864981160,
-      "contentHash": "0ba002e6683b5d03b5cf6bd647a7261f",
-      "sourceName": "contracts/StayKingVault.sol",
-      "solcConfig": {
-        "version": "0.6.0",
-        "settings": {
-          "optimizer": {
-            "enabled": false,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "@openzeppelin/contracts/access/Ownable.sol"
-      ],
-      "versionPragmas": [
-        ">=0.6.0 <0.8.0"
-      ],
-      "artifacts": [
-        "StayKingVault"
-      ]
-    },
     "/Users/chris/Workspace/sooho/stayking-finance/submodules/defi-contract/contracts/StayKingLeveragedPool.sol": {
-      "lastModificationDate": 1659864548658,
-      "contentHash": "e558bce30dd2cf67b8a768cca8cdac2d",
+      "lastModificationDate": 1659926708617,
+      "contentHash": "9370d7454c21df408d16c4c2e9ff6a8a",
       "sourceName": "contracts/StayKingLeveragedPool.sol",
       "solcConfig": {
         "version": "0.6.0",
@@ -422,7 +385,10 @@
           }
         }
       },
-      "imports": [],
+      "imports": [
+        "@openzeppelin/contracts/access/Ownable.sol",
+        "@openzeppelin/contracts/utils/Pausable.sol"
+      ],
       "versionPragmas": [
         ">=0.6.0 <0.8.0"
       ],

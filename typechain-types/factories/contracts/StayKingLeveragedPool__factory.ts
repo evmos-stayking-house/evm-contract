@@ -11,14 +11,227 @@ import type {
 
 const _abi = [
   {
-    inputs: [],
+    inputs: [
+      {
+        internalType: "address",
+        name: "_vault",
+        type: "address",
+      },
+    ],
     stateMutability: "nonpayable",
     type: "constructor",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "address",
+        name: "masterWallet",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "when",
+        type: "uint256",
+      },
+    ],
+    name: "NewVault",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "previousOwner",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "newOwner",
+        type: "address",
+      },
+    ],
+    name: "OwnershipTransferred",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "address",
+        name: "account",
+        type: "address",
+      },
+    ],
+    name: "Paused",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "address",
+        name: "delegator",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "when",
+        type: "uint256",
+      },
+    ],
+    name: "Staked",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "address",
+        name: "account",
+        type: "address",
+      },
+    ],
+    name: "Unpaused",
+    type: "event",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    name: "delegators",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "enterStaking",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "leaveStaking",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "minimumStakeCoin",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "owner",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "paused",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "renounceOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address payable",
+        name: "_vault",
+        type: "address",
+      },
+    ],
+    name: "setVault",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "newOwner",
+        type: "address",
+      },
+    ],
+    name: "transferOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "vault",
+    outputs: [
+      {
+        internalType: "address payable",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
   },
 ];
 
 const _bytecode =
-  "0x6080604052348015600f57600080fd5b50603f80601d6000396000f3fe6080604052600080fdfea264697066735822122041fb71a9613f45c5bced9af14012401e422fed47fe156f5fb3e2d471709d512164736f6c63430006000033";
+  "0x608060405234801561001057600080fd5b50604051610a22380380610a228339818101604052602081101561003357600080fd5b8101908080519060200190929190505050600061005461016260201b60201c565b9050806000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055508073ffffffffffffffffffffffffffffffffffffffff16600073ffffffffffffffffffffffffffffffffffffffff167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e060405160405180910390a35060008060146101000a81548160ff02191690831515021790555067016345785d8a000060028190555080600360006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055505061016a565b600033905090565b6108a9806101796000396000f3fe6080604052600436106100915760003560e01c80638d23fc61116100595780638d23fc61146101625780638da5cb5b146101c757806399fcfccb1461021e578063f2fde38b14610235578063fbfa77cf1461028657610091565b80634cef6cda146100965780635c975abb146100c15780636817031b146100f0578063715018a61461014157806387d3480c14610158575b600080fd5b3480156100a257600080fd5b506100ab6102dd565b6040518082815260200191505060405180910390f35b3480156100cd57600080fd5b506100d66102e3565b604051808215151515815260200191505060405180910390f35b3480156100fc57600080fd5b5061013f6004803603602081101561011357600080fd5b81019080803573ffffffffffffffffffffffffffffffffffffffff1690602001909291905050506102f9565b005b34801561014d57600080fd5b50610156610479565b005b6101606105e7565b005b34801561016e57600080fd5b506101b16004803603602081101561018557600080fd5b81019080803573ffffffffffffffffffffffffffffffffffffffff1690602001909291905050506105e9565b6040518082815260200191505060405180910390f35b3480156101d357600080fd5b506101dc610601565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b34801561022a57600080fd5b5061023361062a565b005b34801561024157600080fd5b506102846004803603602081101561025857600080fd5b81019080803573ffffffffffffffffffffffffffffffffffffffff16906020019092919050505061062c565b005b34801561029257600080fd5b5061029b61081f565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b60025481565b60008060149054906101000a900460ff16905090565b610301610845565b73ffffffffffffffffffffffffffffffffffffffff1661031f610601565b73ffffffffffffffffffffffffffffffffffffffff16146103a8576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004018080602001828103825260208152602001807f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e657281525060200191505060405180910390fd5b80600360006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055507fd121adb44c5268742cd3af919e1df1437aa697b3306c1e6e133e9c97cc65bfc8600360009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1642604051808373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018281526020019250505060405180910390a150565b610481610845565b73ffffffffffffffffffffffffffffffffffffffff1661049f610601565b73ffffffffffffffffffffffffffffffffffffffff1614610528576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004018080602001828103825260208152602001807f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e657281525060200191505060405180910390fd5b600073ffffffffffffffffffffffffffffffffffffffff166000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e060405160405180910390a360008060006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff160217905550565b565b60016020528060005260406000206000915090505481565b60008060009054906101000a900473ffffffffffffffffffffffffffffffffffffffff16905090565b565b610634610845565b73ffffffffffffffffffffffffffffffffffffffff16610652610601565b73ffffffffffffffffffffffffffffffffffffffff16146106db576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004018080602001828103825260208152602001807f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e657281525060200191505060405180910390fd5b600073ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff161415610761576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040180806020018281038252602681526020018061084e6026913960400191505060405180910390fd5b8073ffffffffffffffffffffffffffffffffffffffff166000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e060405160405180910390a3806000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555050565b600360009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b60003390509056fe4f776e61626c653a206e6577206f776e657220697320746865207a65726f2061646472657373a26469706673582212200e70c02ba1b2de9751a4bba3a2baa25975ec9dcdb633ae97ee51bf14ce946bf364736f6c63430006000033";
 
 type StayKingLeveragedPoolConstructorParams =
   | [signer?: Signer]
@@ -38,14 +251,19 @@ export class StayKingLeveragedPool__factory extends ContractFactory {
   }
 
   override deploy(
+    _vault: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<StayKingLeveragedPool> {
-    return super.deploy(overrides || {}) as Promise<StayKingLeveragedPool>;
+    return super.deploy(
+      _vault,
+      overrides || {}
+    ) as Promise<StayKingLeveragedPool>;
   }
   override getDeployTransaction(
+    _vault: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): TransactionRequest {
-    return super.getDeployTransaction(overrides || {});
+    return super.getDeployTransaction(_vault, overrides || {});
   }
   override attach(address: string): StayKingLeveragedPool {
     return super.attach(address) as StayKingLeveragedPool;
