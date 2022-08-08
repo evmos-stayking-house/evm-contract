@@ -4,6 +4,7 @@
 import type {
   BaseContract,
   BigNumber,
+  BigNumberish,
   BytesLike,
   CallOverrides,
   ContractTransaction,
@@ -29,44 +30,83 @@ import type {
 
 export interface StayKingLendingPoolInterface extends utils.Interface {
   functions: {
-    "balanceOf()": FunctionFragment;
+    "MAX_INTEREST_RATE()": FunctionFragment;
+    "MAX_LOAN_INTEREST_RATE()": FunctionFragment;
+    "balanceOf(address)": FunctionFragment;
+    "borrowerInfo(address)": FunctionFragment;
     "deposit()": FunctionFragment;
     "ibToken()": FunctionFragment;
-    "loan()": FunctionFragment;
+    "interestRate()": FunctionFragment;
+    "loan(uint256)": FunctionFragment;
+    "loanInterestRate()": FunctionFragment;
     "owner()": FunctionFragment;
     "paused()": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
+    "repay()": FunctionFragment;
     "totalShares()": FunctionFragment;
     "transferOwnership(address)": FunctionFragment;
     "userInfo(address)": FunctionFragment;
-    "withdraw()": FunctionFragment;
+    "withdraw(uint256)": FunctionFragment;
   };
 
   getFunction(
     nameOrSignatureOrTopic:
+      | "MAX_INTEREST_RATE"
+      | "MAX_LOAN_INTEREST_RATE"
       | "balanceOf"
+      | "borrowerInfo"
       | "deposit"
       | "ibToken"
+      | "interestRate"
       | "loan"
+      | "loanInterestRate"
       | "owner"
       | "paused"
       | "renounceOwnership"
+      | "repay"
       | "totalShares"
       | "transferOwnership"
       | "userInfo"
       | "withdraw"
   ): FunctionFragment;
 
-  encodeFunctionData(functionFragment: "balanceOf", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "MAX_INTEREST_RATE",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "MAX_LOAN_INTEREST_RATE",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "balanceOf",
+    values: [PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "borrowerInfo",
+    values: [PromiseOrValue<string>]
+  ): string;
   encodeFunctionData(functionFragment: "deposit", values?: undefined): string;
   encodeFunctionData(functionFragment: "ibToken", values?: undefined): string;
-  encodeFunctionData(functionFragment: "loan", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "interestRate",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "loan",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "loanInterestRate",
+    values?: undefined
+  ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(functionFragment: "paused", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
     values?: undefined
   ): string;
+  encodeFunctionData(functionFragment: "repay", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "totalShares",
     values?: undefined
@@ -79,18 +119,42 @@ export interface StayKingLendingPoolInterface extends utils.Interface {
     functionFragment: "userInfo",
     values: [PromiseOrValue<string>]
   ): string;
-  encodeFunctionData(functionFragment: "withdraw", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "withdraw",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
 
+  decodeFunctionResult(
+    functionFragment: "MAX_INTEREST_RATE",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "MAX_LOAN_INTEREST_RATE",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "balanceOf", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "borrowerInfo",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "deposit", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "ibToken", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "interestRate",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "loan", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "loanInterestRate",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "paused", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "renounceOwnership",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "repay", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "totalShares",
     data: BytesLike
@@ -104,15 +168,19 @@ export interface StayKingLendingPoolInterface extends utils.Interface {
 
   events: {
     "Deposit(address,uint256,uint256,uint256)": EventFragment;
+    "Loan(address,uint256,uint256,uint256)": EventFragment;
     "OwnershipTransferred(address,address)": EventFragment;
     "Paused(address)": EventFragment;
+    "Repay(address,uint256,uint256,uint256)": EventFragment;
     "Unpaused(address)": EventFragment;
     "Withdraw(address,uint256,uint256)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "Deposit"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "Loan"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Paused"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "Repay"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Unpaused"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Withdraw"): EventFragment;
 }
@@ -129,6 +197,19 @@ export type DepositEvent = TypedEvent<
 >;
 
 export type DepositEventFilter = TypedEventFilter<DepositEvent>;
+
+export interface LoanEventObject {
+  sender: string;
+  amount: BigNumber;
+  interestRate: BigNumber;
+  lastLoanedTime: BigNumber;
+}
+export type LoanEvent = TypedEvent<
+  [string, BigNumber, BigNumber, BigNumber],
+  LoanEventObject
+>;
+
+export type LoanEventFilter = TypedEventFilter<LoanEvent>;
 
 export interface OwnershipTransferredEventObject {
   previousOwner: string;
@@ -148,6 +229,19 @@ export interface PausedEventObject {
 export type PausedEvent = TypedEvent<[string], PausedEventObject>;
 
 export type PausedEventFilter = TypedEventFilter<PausedEvent>;
+
+export interface RepayEventObject {
+  sender: string;
+  amount: BigNumber;
+  interestRate: BigNumber;
+  lastRepayedTime: BigNumber;
+}
+export type RepayEvent = TypedEvent<
+  [string, BigNumber, BigNumber, BigNumber],
+  RepayEventObject
+>;
+
+export type RepayEventFilter = TypedEventFilter<RepayEvent>;
 
 export interface UnpausedEventObject {
   account: string;
@@ -195,7 +289,26 @@ export interface StayKingLendingPool extends BaseContract {
   removeListener: OnEvent<this>;
 
   functions: {
-    balanceOf(overrides?: CallOverrides): Promise<[BigNumber]>;
+    MAX_INTEREST_RATE(overrides?: CallOverrides): Promise<[BigNumber]>;
+
+    MAX_LOAN_INTEREST_RATE(overrides?: CallOverrides): Promise<[BigNumber]>;
+
+    balanceOf(
+      _address: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
+
+    borrowerInfo(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber, BigNumber] & {
+        amount: BigNumber;
+        interestRate: BigNumber;
+        lastLoanedTime: BigNumber;
+        lastRepayedTime: BigNumber;
+      }
+    >;
 
     deposit(
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
@@ -203,9 +316,14 @@ export interface StayKingLendingPool extends BaseContract {
 
     ibToken(overrides?: CallOverrides): Promise<[string]>;
 
+    interestRate(overrides?: CallOverrides): Promise<[BigNumber]>;
+
     loan(
+      _amount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
+
+    loanInterestRate(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     owner(overrides?: CallOverrides): Promise<[string]>;
 
@@ -213,6 +331,10 @@ export interface StayKingLendingPool extends BaseContract {
 
     renounceOwnership(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    repay(
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
     totalShares(overrides?: CallOverrides): Promise<[BigNumber]>;
@@ -235,11 +357,31 @@ export interface StayKingLendingPool extends BaseContract {
     >;
 
     withdraw(
+      _shares: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
   };
 
-  balanceOf(overrides?: CallOverrides): Promise<BigNumber>;
+  MAX_INTEREST_RATE(overrides?: CallOverrides): Promise<BigNumber>;
+
+  MAX_LOAN_INTEREST_RATE(overrides?: CallOverrides): Promise<BigNumber>;
+
+  balanceOf(
+    _address: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
+
+  borrowerInfo(
+    arg0: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<
+    [BigNumber, BigNumber, BigNumber, BigNumber] & {
+      amount: BigNumber;
+      interestRate: BigNumber;
+      lastLoanedTime: BigNumber;
+      lastRepayedTime: BigNumber;
+    }
+  >;
 
   deposit(
     overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
@@ -247,9 +389,14 @@ export interface StayKingLendingPool extends BaseContract {
 
   ibToken(overrides?: CallOverrides): Promise<string>;
 
+  interestRate(overrides?: CallOverrides): Promise<BigNumber>;
+
   loan(
+    _amount: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
+
+  loanInterestRate(overrides?: CallOverrides): Promise<BigNumber>;
 
   owner(overrides?: CallOverrides): Promise<string>;
 
@@ -257,6 +404,10 @@ export interface StayKingLendingPool extends BaseContract {
 
   renounceOwnership(
     overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  repay(
+    overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
   totalShares(overrides?: CallOverrides): Promise<BigNumber>;
@@ -279,23 +430,52 @@ export interface StayKingLendingPool extends BaseContract {
   >;
 
   withdraw(
+    _shares: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    balanceOf(overrides?: CallOverrides): Promise<BigNumber>;
+    MAX_INTEREST_RATE(overrides?: CallOverrides): Promise<BigNumber>;
+
+    MAX_LOAN_INTEREST_RATE(overrides?: CallOverrides): Promise<BigNumber>;
+
+    balanceOf(
+      _address: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    borrowerInfo(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber, BigNumber] & {
+        amount: BigNumber;
+        interestRate: BigNumber;
+        lastLoanedTime: BigNumber;
+        lastRepayedTime: BigNumber;
+      }
+    >;
 
     deposit(overrides?: CallOverrides): Promise<void>;
 
     ibToken(overrides?: CallOverrides): Promise<string>;
 
-    loan(overrides?: CallOverrides): Promise<void>;
+    interestRate(overrides?: CallOverrides): Promise<BigNumber>;
+
+    loan(
+      _amount: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    loanInterestRate(overrides?: CallOverrides): Promise<BigNumber>;
 
     owner(overrides?: CallOverrides): Promise<string>;
 
     paused(overrides?: CallOverrides): Promise<boolean>;
 
     renounceOwnership(overrides?: CallOverrides): Promise<void>;
+
+    repay(overrides?: CallOverrides): Promise<void>;
 
     totalShares(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -316,7 +496,10 @@ export interface StayKingLendingPool extends BaseContract {
       }
     >;
 
-    withdraw(overrides?: CallOverrides): Promise<void>;
+    withdraw(
+      _shares: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
   };
 
   filters: {
@@ -333,6 +516,19 @@ export interface StayKingLendingPool extends BaseContract {
       lastDepositedTime?: null
     ): DepositEventFilter;
 
+    "Loan(address,uint256,uint256,uint256)"(
+      sender?: PromiseOrValue<string> | null,
+      amount?: null,
+      interestRate?: null,
+      lastLoanedTime?: null
+    ): LoanEventFilter;
+    Loan(
+      sender?: PromiseOrValue<string> | null,
+      amount?: null,
+      interestRate?: null,
+      lastLoanedTime?: null
+    ): LoanEventFilter;
+
     "OwnershipTransferred(address,address)"(
       previousOwner?: PromiseOrValue<string> | null,
       newOwner?: PromiseOrValue<string> | null
@@ -344,6 +540,19 @@ export interface StayKingLendingPool extends BaseContract {
 
     "Paused(address)"(account?: null): PausedEventFilter;
     Paused(account?: null): PausedEventFilter;
+
+    "Repay(address,uint256,uint256,uint256)"(
+      sender?: PromiseOrValue<string> | null,
+      amount?: null,
+      interestRate?: null,
+      lastRepayedTime?: null
+    ): RepayEventFilter;
+    Repay(
+      sender?: PromiseOrValue<string> | null,
+      amount?: null,
+      interestRate?: null,
+      lastRepayedTime?: null
+    ): RepayEventFilter;
 
     "Unpaused(address)"(account?: null): UnpausedEventFilter;
     Unpaused(account?: null): UnpausedEventFilter;
@@ -361,7 +570,19 @@ export interface StayKingLendingPool extends BaseContract {
   };
 
   estimateGas: {
-    balanceOf(overrides?: CallOverrides): Promise<BigNumber>;
+    MAX_INTEREST_RATE(overrides?: CallOverrides): Promise<BigNumber>;
+
+    MAX_LOAN_INTEREST_RATE(overrides?: CallOverrides): Promise<BigNumber>;
+
+    balanceOf(
+      _address: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    borrowerInfo(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
 
     deposit(
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
@@ -369,9 +590,14 @@ export interface StayKingLendingPool extends BaseContract {
 
     ibToken(overrides?: CallOverrides): Promise<BigNumber>;
 
+    interestRate(overrides?: CallOverrides): Promise<BigNumber>;
+
     loan(
+      _amount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
+
+    loanInterestRate(overrides?: CallOverrides): Promise<BigNumber>;
 
     owner(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -379,6 +605,10 @@ export interface StayKingLendingPool extends BaseContract {
 
     renounceOwnership(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    repay(
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     totalShares(overrides?: CallOverrides): Promise<BigNumber>;
@@ -394,12 +624,27 @@ export interface StayKingLendingPool extends BaseContract {
     ): Promise<BigNumber>;
 
     withdraw(
+      _shares: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    balanceOf(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    MAX_INTEREST_RATE(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    MAX_LOAN_INTEREST_RATE(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    balanceOf(
+      _address: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    borrowerInfo(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
 
     deposit(
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
@@ -407,9 +652,14 @@ export interface StayKingLendingPool extends BaseContract {
 
     ibToken(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
+    interestRate(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
     loan(
+      _amount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
+
+    loanInterestRate(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
@@ -417,6 +667,10 @@ export interface StayKingLendingPool extends BaseContract {
 
     renounceOwnership(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    repay(
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     totalShares(overrides?: CallOverrides): Promise<PopulatedTransaction>;
@@ -432,6 +686,7 @@ export interface StayKingLendingPool extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     withdraw(
+      _shares: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
   };
