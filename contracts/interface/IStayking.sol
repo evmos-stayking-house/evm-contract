@@ -10,11 +10,23 @@ pragma solidity ^0.8.9;
  *************************************************************/
 interface IStayking { 
 
+    event Stake(address user, uint256 equity, uint256 debtInBase);
+    event Unstake(address user, uint256 equity, uint256 debtInBase);
+    event AddPosition(address user, uint256 equity, uint256 debtInBase, address vault, uint256 debt);
+    event RemovePosition(address user, uint256 equity, uint256 debtInBase, address vault, uint256 debt);
+    event AddEquity(address user, uint256 amount);
+    event RemoveEquity(address user, uint256 amount);
+    event AddDebt(address user, uint256 debtInBase, address vault, uint256 debt);
+    event RemoveDebt(address user, uint256 debtInBase, address vault, uint256 debt);
+    event Accrue(address delegator, uint256 amount);
+    event Harvest(address user, uint256 amount);
+
     // struct Position {
     //     address user;
     //     address vault;
     //     uint256 equity;
     //     uint256 debt;
+    //     uint256 lastHarvestedAt;
     // }
 
     function addVault(address token, address vault) external;
@@ -51,11 +63,15 @@ interface IStayking {
         uint256 extraDebtInBase
     ) payable external;
 
-
     function isKillable(uint256 positionId) external view returns(bool);
     
     function kill(uint256 positionId) external;
 
-    function delegate (uint256 amount) external;
+    /***********************
+     * Only for Delegator *
+     ***********************/
+    function delegate(uint256 amount) external;
+
+    function accrue(uint256 amount) payable external;
 
 }
