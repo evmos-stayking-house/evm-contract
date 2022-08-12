@@ -4,25 +4,32 @@ pragma solidity ^0.8.4;
 
 interface IVault { 
 
-    event Deposit(address user, uint256 amount);
-    event Withdraw(address user, uint256 amount);
+    event Deposit(address user, uint256 amount, uint256 share);
+    event Withdraw(address user, uint256 amount, uint256 share);
     event Loan(address user, uint256 amount);
     event Repay(address user, uint256 amount);
     event PayInterest(uint256 totalDebt, uint256 interest);
     event TransferDebtOwnership(address from, address to, uint256 amount);
     event UtilizationRate(uint256 rateBps);
 
-    function baseTokenAddress() external returns(address);
+    function token() external returns(address);
+    
+    function stayking() external returns(address);
+
+    function interestModel() external returns(address);
+
+    function totalAmount() external view returns(uint256);
 
     function utilizationRateBps() external view returns(uint256);
 
-    function getInterestRateBps() external view returns(uint256);
+    /// @dev denominator = 1E18 
+    function getInterestRate() external view returns(uint256);
 
     function saveUtilizationRateBps() external;
 
-    function deposit(uint256 amount) external;
+    function deposit(uint256 amount) external returns(uint256);
 
-    function withdraw(uint256 share) external;
+    function withdraw(uint256 share) external returns(uint256);
 
     function repay(
         address user,
@@ -44,8 +51,7 @@ interface IVault {
 
     function payInterest() external;
 
-    function updateStayking(
-        address newStaykingAddress
-    ) external;
+    function updateStayking(address newStaykingAddress) external;
 
+    function updateMinReservedBps(uint256 newMinReservedBps) external;
 }

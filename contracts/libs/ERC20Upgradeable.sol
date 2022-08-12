@@ -3,7 +3,7 @@
 
 pragma solidity ^0.8.2;
 
-import "./IERC20Upgradeable.sol";
+import "./interface/IERC20.sol";
 import "./ContextUpgradeable.sol";
 import "./Initializable.sol";
 
@@ -32,7 +32,7 @@ import "./Initializable.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20Upgradeable {
+contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20 {
     mapping(address => uint256) private _balances;
 
     mapping(address => mapping(address => uint256)) private _allowances;
