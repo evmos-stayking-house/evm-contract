@@ -10,17 +10,6 @@ pragma solidity ^0.8.4;
  *************************************************************/
 interface IStayking { 
 
-    event Stake(address user, uint256 equity, uint256 debtInBase);
-    event Unstake(address user, uint256 equity, uint256 debtInBase);
-    event AddPosition(address user, uint256 equity, uint256 debtInBase, address vault, uint256 debt);
-    event RemovePosition(address user, uint256 equity, uint256 debtInBase, address vault, uint256 debt);
-    event AddEquity(address user, uint256 amount);
-    event RemoveEquity(address user, uint256 amount);
-    event AddDebt(address user, uint256 debtInBase, address vault, uint256 debt);
-    event RemoveDebt(address user, uint256 debtInBase, address vault, uint256 debt);
-    event Accrue(address delegator, uint256 amount);
-    event Harvest(address user, uint256 amount);
-
     // struct Position {
     //     address user;
     //     address vault;
@@ -29,11 +18,11 @@ interface IStayking {
     //     uint256 lastHarvestedAt;
     // }
 
-    function addVault(address token, address vault) external;
+    function setVault(address token, address vault) external;
     
     function tokenToVault(address token) external view returns(address vault);
 
-    function addWhitelistDelegator(address delegator) external;
+    function setWhitelistDelegatorStatus(address delegator, bool status) external;
 
     /// @dev min debtAmount in EVMOS (base token)
     function minDebtInBase() external view returns (uint256);
@@ -53,13 +42,25 @@ interface IStayking {
     /// @param debtToken    debtToken Address (not vault address)
     function removePosition(uint256 debtToken) external;
 
-    /// @dev Put more equity or increase debt.
+    /// @dev Increase debt ratio of position.
     /// @param debtToken    debtToken Address (not vault address)
     /// @param extraEquity  amount of additional equity
     /// @param extraDebtInBase  amount of additional debt in EVMOS
-    function editPosition(
+    function increasePositionDebt(
+        address debtToken,
+        uint256 extraDebtInBase
+    ) external;
+
+    /// @dev Decrease debt ratio by repaying debt or increase equity.
+    /// @notice you can repay debt by baseToken(EVMOS) or debtToken.
+    /// @param debtToken    debtToken Address (not vault address)
+    /// @param extraEquity  amount of additional equity
+    /// @param extraDebt  amount of additional debt in debtToken
+    /// @param extraDebtInBase  amount of additional debt in EVMOS
+    function decreasePositionDebt(
         address debtToken,
         uint256 extraEquity,
+        uint256 extraDebt,
         uint256 extraDebtInBase
     ) payable external;
 
