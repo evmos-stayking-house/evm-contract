@@ -12,14 +12,13 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     address public constant BASE_TOKEN = address(0);
 
-    event Stake(address user, uint256 equity, uint256 debtInBase);
-    event Unstake(address user, uint256 equity, uint256 debtInBase);
-    event AddPosition(address user, uint256 equity, uint256 debtInBase, address vault, uint256 debt);
-    event RemovePosition(address user, uint256 equity, uint256 debtInBase, address vault, uint256 debt);
-    event AddEquity(address user, uint256 amount);
-    event RemoveEquity(address user, uint256 amount);
-    event AddDebt(address user, address vault, uint256 debt, uint256 debtInBase);
-    event RepayDebt(address user, address vault, uint256 debt, uint256 debtInBase);
+    event Stake(address user, uint256 amount, uint256 share);
+    event Unstake(address user, uint256 amount, uint256 share);
+    event AddPosition(address user, address vault, uint256 equity, uint256 debtInBase, uint256 debt, uint256 share);
+    event RemovePosition(address user, address vault, uint256 equity, uint256 debtInBase, uint256 debt, uint256 share);
+    event PositionChanged(address user, address vault, uint256 amount, uint256 share, uint256 debt);
+    // @TODO
+    event Kill(address user); 
     event Accrue(address delegator, uint256 amount);
 
     // Operation Events
@@ -33,7 +32,11 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     mapping(address => address) public override tokenToVault;
 
-    uint256 totalStaked;
+    /// @dev kor) 유저가 예치한 금액 + auto-compound된 금액
+    uint256 public totalAmount; 
+    /// @dev kor) auto-compound되어도 totalShare는 변하지 않음.
+    ///  유저는 예치하는 시점에 (예치 금액/totalAmount) * totalShare에 해당하는 share를 받음.
+    uint256 public totalShare;  
 
     /// @dev min debtAmount in EVMOS (base token)
     uint256 public override minDebtInBase;
@@ -41,10 +44,11 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     struct Position {
         address user;
-        uint256 equity;
-        uint256 debtInBase;
+        // uint256 equity;
+        // uint256 debtInBase;
+        /// @dev totalShare * (equity + debtInBase) / totalAmount
+        uint256 share;
         uint256 debt;
-        uint256 lastHarvestedAt;
     }
 
     /// @dev userAddress => vaultAddress => positionId (array Index of position)
@@ -125,10 +129,8 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         positions[vault].push(
             Position({
                 user: address(0),
-                equity: 0,
-                debtInBase: 0,
-                debt: 0,
-                lastHarvestedAt: 0
+                share: 0,
+                debt: 0
             })
         );
     }
@@ -190,17 +192,16 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function _stake(
         address user,
-        address token,
-        uint256 equity,
-        uint256 debtInBase
-    ) private {
+        uint256 amount
+    ) private returns (uint256 share) {
+        share = amountToShare(amount);
+        totalAmount += amount;
+        totalShare += share;
         /**
             @TODO
          */
-        totalStaked += (equity + debtInBase);
         
-        emit Stake(user, equity, debtInBase);
-
+        emit Stake(user, amount, share);
     }
 
 
@@ -221,21 +222,17 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
      */
     function _unstake(
         address user,
-        address token,
-        uint256 equity,
-        uint256 debtInBase
-    ) private returns (uint256 lockedstEVMOS){
+        uint256 amount,
+        uint256 share
+    ) private{
         /** 
             @TODO
             /IMPL/
         */
-        
-        totalStaked -= (equity + debtInBase);
+        totalAmount -= amount;
+        totalShare -= share;
 
-        emit Unstake(user, equity, debtInBase);
-
-        // @TODO to be changed
-        lockedstEVMOS = equity;
+        emit Unstake(user, amount, share);
     }
 
     /// @dev
@@ -248,23 +245,38 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     ) private returns(uint256 repaidInBase) {
         repaidInBase = swapHelper.getDx(BASE_TOKEN, token, debt);
         _swapFromTokenToBase(token, repaidInBase, debt);
+
+        /**
+        @TODO
+         */
     }
 
-    function _harvest(
-        address user,
-        address vault
-    ) private {
-        // @TODO IMPL
-        // positions[vault].lastHarvestedAt = block.timestamp;
-    }
-
-    function _isHealty(
-        uint256 equity,
+    function _isHealthy(
         address token,
+        uint256 share,
         uint256 debt
     ) private view returns(bool) {
         uint256 debtInBase = swapHelper.getDx(BASE_TOKEN, token, debt);
-        return debtInBase * 1e4 < (equity + debtInBase) * killFactorBps; 
+        return debtInBase * 1e4 < shareToAmount(share) * killFactorBps; 
+    }
+
+    /******************
+     * Util Functions *
+    *******************/
+    /// @notice 
+    /// 유저는 예치하는 시점에 (예치 금액 / totalAmount) * totalShare에 해당하는 share를 받음.
+    function amountToShare(
+        uint256 amount
+    ) public view returns(uint256) {
+        return (totalAmount == 0) ? amount :
+            (totalShare * amount) / totalAmount;
+    }
+
+    function shareToAmount(
+        uint256 share
+    ) public view returns(uint256) {
+        return (totalShare == 0) ? share :
+            (totalAmount * share) / totalShare;
     }
 
     /******************************
@@ -282,8 +294,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address vault = tokenToVault[debtToken];
         require(positionIdOf[msg.sender][vault] > 0, "addPosition: already have position");
         require(equity == msg.value, "addPosition: msg.value != equity");
+        
+        uint256 amount = equity + debtInBase;
         require(
-            debtInBase * 1e4 < (equity + debtInBase) * killFactorBps,
+            debtInBase * 1e4 < amount * killFactorBps,
             "addPosition: bad debt, cannot open position"
         );
 
@@ -297,28 +311,22 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             debtInBase
         );
 
+        uint256 share = _stake(msg.sender, amount);
+
         // write new position state
         positions[vault].push(
             Position({
                 user: msg.sender,
-                equity: equity,
-                debtInBase: debtInBase,
-                debt: debt,
-                lastHarvestedAt: block.timestamp
+                share: share,
+                debt: debt
             })
         );
+
         uint256 positionId = positionsLengthOf[vault];
         positionsLengthOf[vault] += 1;
         positionIdOf[msg.sender][vault] = positionId;
 
-        _stake(
-            msg.sender,
-            debtToken,
-            equity,
-            debtInBase
-        );
-
-        emit AddPosition(msg.sender, equity, debtInBase, vault, debt);
+        emit AddPosition(msg.sender, vault, equity, debtInBase, debt, share);
     }
 
 
@@ -329,7 +337,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     ) public override {
         address vault = tokenToVault[debtToken];
         Position storage p = positions[vault][positionIdOf[msg.sender][vault]];
-        require(p.equity > 0, "removeLiquidity: No position for this token");
+        require(p.share > 0, "removePosition: No position for this token");
 
         // 1. check if user can repay debt
         /// @dev amount in EVMOS that user have to repay
@@ -339,28 +347,32 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             p.debt
         );
 
+        uint stakedAmount = shareToAmount(p.share);
+
         require(
-            (p.debtInBase + p.equity) >= currentDebtInBase,
-            "removeLiquidity: Bad debt"
+            stakedAmount >= currentDebtInBase,
+            "removePosition: Bad debt"
         );
 
-        // harvest all interests before remove position
-        _harvest(msg.sender, vault);
+        _unstake(msg.sender, stakedAmount, p.share);
 
-        // @TODO
-        _unstake(msg.sender, debtToken, p.equity, p.debtInBase);
+        emit RemovePosition(
+            msg.sender, 
+            vault, 
+            stakedAmount - currentDebtInBase, 
+            currentDebtInBase, 
+            p.debt, 
+            p.share
+        );
 
-        p.equity = 0;
+        p.share = 0;
         // kor) debt를 바로 0으로 만들 것인지?
         p.debt = 0;
-        p.debtInBase = 0;
 
         positionIdOf[msg.sender][vault] = 0; // kor) positionId 초기화
-        totalStaked -= (p.debtInBase + p.equity);
-        emit RemovePosition(msg.sender, p.equity, p.debtInBase, vault, p.debt);
     }
 
-    /// @dev Increase debt ratio of position.
+    /// @dev Borrow more debt (increase debt ratio)
     /// @param debtToken    debtToken Address (not vault address)
     /// @param extraDebtInBase  amount of additional debt in EVMOS
     function addDebt(
@@ -368,12 +380,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 extraDebtInBase
     ) public override {
         address vault = tokenToVault[debtToken];        
-        // harvest all interests before edit position
-        _harvest(msg.sender, vault);
         Position storage p = positions[vault][positionIdOf[msg.sender][vault]];
 
-        require(p.equity > 0, "increasePositionDebt: no position in for this token.");
-        require(extraDebtInBase > 0, "increasePositionDebt: extraDebtInBase <= 0");
+        require(p.share > 0, "addDebt: no position in for this token.");
+        require(extraDebtInBase > 0, "addDebt: extraDebtInBase <= 0");
 
         // borrow token from vault
         uint256 extraDebt = _borrowAndSwapEvmos(
@@ -383,32 +393,30 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             extraDebtInBase
         );
 
+        uint256 extraShare = amountToShare(extraDebtInBase);
+
         // write edited position state
         p.debt += extraDebt;
-        p.debtInBase += extraDebtInBase;
+        p.share += extraShare;
 
         require(
-            _isHealty(p.equity, debtToken, p.debtInBase),
+            _isHealthy(debtToken, p.share, p.debt),
             "addDebt: bad debt, cannot add more debt anymore."
         );
 
-        _stake(
-            msg.sender,
-            debtToken,
-            0,
-            extraDebtInBase
+        _stake(msg.sender, extraDebtInBase);
+
+        emit PositionChanged(
+            msg.sender, 
+            vault, 
+            shareToAmount(p.share),
+            p.share,
+            p.debt
         );
 
-        uint256 positionId = positionsLengthOf[vault];
-        positionsLengthOf[vault] += 1;
-        positionIdOf[msg.sender][vault] = positionId;
-
-        totalStaked += extraDebtInBase;
-
-        emit AddDebt(msg.sender, vault, extraDebt, extraDebtInBase);
     }
 
-    /// @dev Repay debt (decrease debt ratio, total staked amount not changes.)
+    /// @dev Repay debt (decrease debt ratio, total staked amount(or share) does not change)
     /// @notice user should repay debt using debtToken
     /// @notice user approve should be preceded
     /// @param debtToken    debtToken Address (not vault address)
@@ -418,19 +426,8 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 repaidDebt
     ) public override {
         address vault = tokenToVault[debtToken];        
-        // harvest all interests before edit position
-        _harvest(msg.sender, vault);
         Position storage p = positions[vault][positionIdOf[msg.sender][vault]];
-        require(p.equity > 0, "increasePositionDebt: no position in for this token.");
-
-        require(
-            p.debt >= repaidDebt, "repayDebt: too much repaid debt"
-        );
-
-        /// @dev kor) 
-        /// 실제 가격이 아닌 전체 빚 중 갚은 빚의 비율만큼 
-        /// repaidDebtInBase이 산정된다.
-        uint256 repaidDebtInBase = repaidDebt * p.debtInBase / p.debt;
+        require(p.debt >= repaidDebt, "repayDebt: too much repaid debt");
 
         SafeToken.safeTransferFrom(
             debtToken,
@@ -439,27 +436,19 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             repaidDebt
         );
 
-        SafeToken.safeApprove(
-            debtToken,
-            vault,
-            repaidDebt
-        );
+        SafeToken.safeApprove(debtToken, vault, repaidDebt);
 
-        IVault(vault).repay(
-            msg.sender,
-            repaidDebt
-        );
+        IVault(vault).repay(msg.sender, repaidDebt);
 
         p.debt -= repaidDebt;
-        p.debtInBase -= repaidDebtInBase;
-        p.equity += repaidDebtInBase;
 
-        require(
-            _isHealty(p.equity, debtToken, p.debtInBase),
-            "repayDebt: bad debt, cannot repay debt"
-        );
-
-        emit RepayDebt(msg.sender, vault, repaidDebt, repaidDebtInBase);
+        emit PositionChanged(
+            msg.sender, 
+            vault, 
+            shareToAmount(p.share),
+            p.share,
+            p.debt
+        );    
     }
 
 
@@ -471,44 +460,49 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 extraEquity
     ) payable public override {
         address vault = tokenToVault[debtToken];        
-        // harvest all interests before edit position
-        _harvest(msg.sender, vault);
         Position storage p = positions[vault][positionIdOf[msg.sender][vault]];
 
-        p.equity += extraEquity;
+        _stake(msg.sender, extraEquity);
 
-        _stake(
-            msg.sender,
-            debtToken,
-            extraEquity,
-            0
-        );
+        p.share += amountToShare(extraEquity);
 
-        require(
-            _isHealty(p.equity, debtToken, p.debtInBase),
-            "addEquity: bad debt, cannot add equity."
-        );
-    }
-
-
-    /// @dev harvest(claim)할 수 있도록할지? 아니면 only auto-compound?
-    function harvest(address debtToken) public {
-        address vault = tokenToVault[debtToken];
-        // harvest all interests before remove position
-        _harvest(msg.sender, vault);
+        emit PositionChanged(
+            msg.sender, 
+            vault, 
+            shareToAmount(p.share),
+            p.share,
+            p.debt
+        ); 
     }
 
 
     function isKillable(
+        address debtToken,
         uint256 positionId
     ) public override view returns(bool) {
-        return false;
+        Position memory p = positions[tokenToVault[debtToken]][positionId];
+        return _isHealthy(debtToken, p.share, p.debt);
     }
     
     function kill(
+        address debtToken,
         uint256 positionId
     ) public override onlyKiller {
-        require(isKillable(positionId), "Kill: still safe position.");
+        Position storage p = positions[tokenToVault[debtToken]][positionId];
+        require(
+            _isHealthy(debtToken, p.share, p.debt), 
+            "Kill: still safe position."
+        );
+
+        uint256 amount = shareToAmount(p.share);
+        /**
+            @TODO
+            
+         */
+        _unstake(p.user, amount, p.share);
+
+        /// @TODO
+        emit Kill(p.user);
     }
 
     /***********************

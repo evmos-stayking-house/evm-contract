@@ -91,6 +91,11 @@
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "debtToken",
+          "type": "address"
+        },
+        {
           "internalType": "uint256",
           "name": "positionId",
           "type": "uint256"
@@ -109,6 +114,11 @@
     },
     {
       "inputs": [
+        {
+          "internalType": "address",
+          "name": "debtToken",
+          "type": "address"
+        },
         {
           "internalType": "uint256",
           "name": "positionId",

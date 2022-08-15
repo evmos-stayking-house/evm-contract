@@ -68,9 +68,9 @@ interface IStayking {
         uint256 extraEquity
     ) payable external;
 
-    function isKillable(uint256 positionId) external view returns(bool);
+    function isKillable(address debtToken, uint256 positionId) external view returns(bool);
     
-    function kill(uint256 positionId) external;
+    function kill(address debtToken, uint256 positionId) external;
 
     /***********************
      * Only for Delegator *
