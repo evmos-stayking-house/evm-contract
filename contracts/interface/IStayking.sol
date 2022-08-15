@@ -40,28 +40,32 @@ interface IStayking {
 
 
     /// @param debtToken    debtToken Address (not vault address)
-    function removePosition(uint256 debtToken) external;
+    function removePosition(address debtToken) external;
 
-    /// @dev Increase debt ratio of position.
+    /// @dev Borrow more debt (increase debt ratio)
     /// @param debtToken    debtToken Address (not vault address)
-    /// @param extraEquity  amount of additional equity
     /// @param extraDebtInBase  amount of additional debt in EVMOS
-    function increasePositionDebt(
+    function addDebt(
         address debtToken,
         uint256 extraDebtInBase
     ) external;
 
-    /// @dev Decrease debt ratio by repaying debt or increase equity.
-    /// @notice you can repay debt by baseToken(EVMOS) or debtToken.
+    /// @dev Repay debt (decrease debt ratio)
+    /// @notice user should repay debt using debtToken
+    /// @notice user approve should be preceded
+    /// @param debtToken    debtToken Address (not vault address)
+    /// @param repaidDebt  amount of repaid debt in debtToken
+    function repayDebt(
+        address debtToken,
+        uint256 repaidDebt
+    ) external;
+
+    /// @dev add additional equity (decrease debt ratio)
     /// @param debtToken    debtToken Address (not vault address)
     /// @param extraEquity  amount of additional equity
-    /// @param extraDebt  amount of additional debt in debtToken
-    /// @param extraDebtInBase  amount of additional debt in EVMOS
-    function decreasePositionDebt(
+    function addEquity(
         address debtToken,
-        uint256 extraEquity,
-        uint256 extraDebt,
-        uint256 extraDebtInBase
+        uint256 extraEquity
     ) payable external;
 
     function isKillable(uint256 positionId) external view returns(bool);

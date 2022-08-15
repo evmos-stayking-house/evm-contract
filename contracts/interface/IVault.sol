@@ -20,6 +20,8 @@ interface IVault {
 
     function totalAmount() external view returns(uint256);
 
+    function totalDebt() external view returns(uint256);
+
     function utilizationRateBps() external view returns(uint256);
 
     /// @dev denominator = 1E18 
@@ -31,15 +33,15 @@ interface IVault {
 
     function withdraw(uint256 share) external returns(uint256);
 
-    function repay(
-        address user,
-        uint256 amount
-    ) external;
-
     /******************************
      * Only for Stayking Contract *
      ******************************/
     function loan(
+        address user,
+        uint256 amount
+    ) external;
+
+    function repay(
         address user,
         uint256 amount
     ) external;

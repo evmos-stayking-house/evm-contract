@@ -10,7 +10,7 @@ import "../lib/ReentrancyGuardUpgradeable.sol";
 
 contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
-    constant address BASE_TOKEN = address(0);
+    address public constant BASE_TOKEN = address(0);
 
     event Stake(address user, uint256 equity, uint256 debtInBase);
     event Unstake(address user, uint256 equity, uint256 debtInBase);
@@ -18,8 +18,8 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     event RemovePosition(address user, uint256 equity, uint256 debtInBase, address vault, uint256 debt);
     event AddEquity(address user, uint256 amount);
     event RemoveEquity(address user, uint256 amount);
-    event AddDebt(address user, uint256 debtInBase, address vault, uint256 debt);
-    event RepayDebt(address user, uint256 debtInBase, address vault, uint256 debt);
+    event AddDebt(address user, address vault, uint256 debt, uint256 debtInBase);
+    event RepayDebt(address user, address vault, uint256 debt, uint256 debtInBase);
     event Accrue(address delegator, uint256 amount);
 
     // Operation Events
@@ -29,13 +29,15 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     event ChangeSwapHelper(address swapHelper);
 
     mapping(address => bool) public whitelistedDelegator;
+    mapping(address => bool) public whitelistedKiller;
+
     mapping(address => address) public override tokenToVault;
 
     uint256 totalStaked;
 
     /// @dev min debtAmount in EVMOS (base token)
-    uint256 public minDebtInBase;
-    uint256 public killFactorBps;
+    uint256 public override minDebtInBase;
+    uint256 public override killFactorBps;
 
     struct Position {
         address user;
@@ -47,6 +49,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @dev userAddress => vaultAddress => positionId (array Index of position)
     mapping(address => mapping(address => uint256)) public positionIdOf;
+    /// @dev vaultAddress => Position[]
     mapping(address => Position[]) public positions;
     mapping(address => uint256) public positionsLengthOf;
 
@@ -63,6 +66,14 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         require(
             whitelistedDelegator[msg.sender],
             "Stayking: Not whitelisted delegator."
+        );
+        _;
+    }
+
+    modifier onlyKiller(){
+        require(
+            whitelistedKiller[msg.sender],
+            "Stayking: Not whitelisted Killer."
         );
         _;
     }
@@ -103,21 +114,23 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             emit AddVault(token, vault);
         else {
             require(
-                IVault(tokenToVault[token]).totalDebt == 0,
+                IVault(tokenToVault[token]).totalDebt() == 0,
                 "setVault: Debt remains on the existing vault."
-            )
+            );
             emit ChangeVault(token, vault);
         }
 
         tokenToVault[token] = vault;
         // push null position
-        positions[vault].push({
-            user: address(0),
-            equity: 0,
-            debtInBase: 0,
-            debt: 0,
-            lastHarvestedAt: 0
-        });
+        positions[vault].push(
+            Position({
+                user: address(0),
+                equity: 0,
+                debtInBase: 0,
+                debt: 0,
+                lastHarvestedAt: 0
+            })
+        );
     }
 
     function setConfigs(
@@ -143,18 +156,18 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function _swapFromBaseToToken(
         address token,
         uint256 dx,
-        uint256 minDy,
+        uint256 minDy
     ) private returns (uint256 dy){
-        dy = swapHelper.exchange{value: dx}(from, BASE_TOKEN, debt, minDy);
+        dy = swapHelper.exchange{value: dx}(token, BASE_TOKEN, dx, minDy);
     }
     function _swapFromTokenToBase(
         address token,
         uint256 dx,
-        uint256 minDy,
+        uint256 minDy
     ) private returns (uint256 dy){
-        SafeToken.safeApprove(from, address(swapHelper), dx);
-        // should check if success
-        dy = swapHelper.exchange(from, BASE_TOKEN, debt, minDy);
+        SafeToken.safeApprove(token, address(swapHelper), dx);
+        // @TODO should check if success
+        dy = swapHelper.exchange(token, BASE_TOKEN, dx, minDy);
     }
 
 
@@ -172,6 +185,22 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         IVault(vault).loan(user, debt);
         _swapFromTokenToBase(token, debt, debtInBase);
+    }
+
+
+    function _stake(
+        address user,
+        address token,
+        uint256 equity,
+        uint256 debtInBase
+    ) private {
+        /**
+            @TODO
+         */
+        totalStaked += (equity + debtInBase);
+        
+        emit Stake(user, equity, debtInBase);
+
     }
 
 
@@ -193,14 +222,20 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function _unstake(
         address user,
         address token,
-        uint256 repayDebt
+        uint256 equity,
+        uint256 debtInBase
     ) private returns (uint256 lockedstEVMOS){
-        // uint256 repayDebtInBase = 
         /** 
             @TODO
             /IMPL/
         */
-        emit Unstake(user, uint256 equity, uint256 debtInBase);
+        
+        totalStaked -= (equity + debtInBase);
+
+        emit Unstake(user, equity, debtInBase);
+
+        // @TODO to be changed
+        lockedstEVMOS = equity;
     }
 
     /// @dev
@@ -211,8 +246,8 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address vault,
         uint256 debt
     ) private returns(uint256 repaidInBase) {
-        repaidInBase = IVault(vault).getDx(BASE_TOKEN, token, debt);
-        _swap(token, BASE_TOKEN, repaidInBase, debt);
+        repaidInBase = swapHelper.getDx(BASE_TOKEN, token, debt);
+        _swapFromTokenToBase(token, repaidInBase, debt);
     }
 
     function _harvest(
@@ -220,7 +255,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address vault
     ) private {
         // @TODO IMPL
-        positions[vault].lastHarvestedAt = block.timestamp;
+        // positions[vault].lastHarvestedAt = block.timestamp;
     }
 
     function _isHealty(
@@ -243,14 +278,14 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address debtToken,
         uint256 equity,
         uint256 debtInBase
-    ) public payable {
+    ) public payable override {
         address vault = tokenToVault[debtToken];
         require(positionIdOf[msg.sender][vault] > 0, "addPosition: already have position");
         require(equity == msg.value, "addPosition: msg.value != equity");
         require(
             debtInBase * 1e4 < (equity + debtInBase) * killFactorBps,
             "addPosition: bad debt, cannot open position"
-        )
+        );
 
         // borrow token from vault
         // @TODO should be tested
@@ -263,18 +298,25 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         );
 
         // write new position state
-        positions[vault].push({
-            user: msg.sender,
-            equity: equity,
-            debtInBase: debtInBase,
-            debt: debt,
-            lastHarvestedAt: block.timestamp
-        });
-        uint256 positionId = positionsLength;
+        positions[vault].push(
+            Position({
+                user: msg.sender,
+                equity: equity,
+                debtInBase: debtInBase,
+                debt: debt,
+                lastHarvestedAt: block.timestamp
+            })
+        );
+        uint256 positionId = positionsLengthOf[vault];
         positionsLengthOf[vault] += 1;
         positionIdOf[msg.sender][vault] = positionId;
 
-        totalStaked += (equity + debtInBase);
+        _stake(
+            msg.sender,
+            debtToken,
+            equity,
+            debtInBase
+        );
 
         emit AddPosition(msg.sender, equity, debtInBase, vault, debt);
     }
@@ -283,30 +325,35 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @dev remove all position of debtToken vault.
     /// @param debtToken    debtToken Address (not vault address)
     function removePosition(
-        uint256 debtToken
-    ) public {
+        address debtToken
+    ) public override {
         address vault = tokenToVault[debtToken];
-
-        // harvest all interests before remove position
-        _harvest(msg.sender, vault);
-
-        Position storage p = positions[positionIdOf[msg.sender][vault]];
+        Position storage p = positions[vault][positionIdOf[msg.sender][vault]];
         require(p.equity > 0, "removeLiquidity: No position for this token");
 
         // 1. check if user can repay debt
-        /// @dev amount in debtToken that user have to repay
+        /// @dev amount in EVMOS that user have to repay
         uint256 currentDebtInBase = swapHelper.getDx(
             BASE_TOKEN, 
             debtToken, 
             p.debt
         );
+
         require(
-            currentDebtInBase =< (p.debtInBase + p.equity),
+            (p.debtInBase + p.equity) >= currentDebtInBase,
             "removeLiquidity: Bad debt"
         );
 
+        // harvest all interests before remove position
+        _harvest(msg.sender, vault);
+
         // @TODO
-        _unstake(msg.sender, debtToken, p.debt);
+        _unstake(msg.sender, debtToken, p.equity, p.debtInBase);
+
+        p.equity = 0;
+        // kor) debt를 바로 0으로 만들 것인지?
+        p.debt = 0;
+        p.debtInBase = 0;
 
         positionIdOf[msg.sender][vault] = 0; // kor) positionId 초기화
         totalStaked -= (p.debtInBase + p.equity);
@@ -315,17 +362,15 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @dev Increase debt ratio of position.
     /// @param debtToken    debtToken Address (not vault address)
-    /// @param extraEquity  amount of additional equity
     /// @param extraDebtInBase  amount of additional debt in EVMOS
-    function increasePositionDebt(
+    function addDebt(
         address debtToken,
         uint256 extraDebtInBase
-    ) public {
-        address vault = tokenToVault[debtToken];
-        
-        // harvest all interests before remove position
+    ) public override {
+        address vault = tokenToVault[debtToken];        
+        // harvest all interests before edit position
         _harvest(msg.sender, vault);
-        Position storage p = positions[positionIdOf[msg.sender][vault]];
+        Position storage p = positions[vault][positionIdOf[msg.sender][vault]];
 
         require(p.equity > 0, "increasePositionDebt: no position in for this token.");
         require(extraDebtInBase > 0, "increasePositionDebt: extraDebtInBase <= 0");
@@ -344,90 +389,107 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         require(
             _isHealty(p.equity, debtToken, p.debtInBase),
-            "increasePositionDebt: bad debt, cannot open position"
-        )
+            "addDebt: bad debt, cannot add more debt anymore."
+        );
 
-        // @TODO check position is healthy
+        _stake(
+            msg.sender,
+            debtToken,
+            0,
+            extraDebtInBase
+        );
 
-        uint256 positionId = positionsLength;
+        uint256 positionId = positionsLengthOf[vault];
         positionsLengthOf[vault] += 1;
         positionIdOf[msg.sender][vault] = positionId;
 
         totalStaked += extraDebtInBase;
-    };
 
-    /// @dev Decrease debt ratio by repaying debt or increase equity.
-    /// @notice you can repay debt by baseToken(EVMOS) or debtToken.
+        emit AddDebt(msg.sender, vault, extraDebt, extraDebtInBase);
+    }
+
+    /// @dev Repay debt (decrease debt ratio, total staked amount not changes.)
+    /// @notice user should repay debt using debtToken
+    /// @notice user approve should be preceded
+    /// @param debtToken    debtToken Address (not vault address)
+    /// @param repaidDebt  amount of repaid debt in debtToken
+    function repayDebt(
+        address debtToken,
+        uint256 repaidDebt
+    ) public override {
+        address vault = tokenToVault[debtToken];        
+        // harvest all interests before edit position
+        _harvest(msg.sender, vault);
+        Position storage p = positions[vault][positionIdOf[msg.sender][vault]];
+        require(p.equity > 0, "increasePositionDebt: no position in for this token.");
+
+        require(
+            p.debt >= repaidDebt, "repayDebt: too much repaid debt"
+        );
+
+        /// @dev kor) 
+        /// 실제 가격이 아닌 전체 빚 중 갚은 빚의 비율만큼 
+        /// repaidDebtInBase이 산정된다.
+        uint256 repaidDebtInBase = repaidDebt * p.debtInBase / p.debt;
+
+        SafeToken.safeTransferFrom(
+            debtToken,
+            msg.sender,
+            address(this),
+            repaidDebt
+        );
+
+        SafeToken.safeApprove(
+            debtToken,
+            vault,
+            repaidDebt
+        );
+
+        IVault(vault).repay(
+            msg.sender,
+            repaidDebt
+        );
+
+        p.debt -= repaidDebt;
+        p.debtInBase -= repaidDebtInBase;
+        p.equity += repaidDebtInBase;
+
+        require(
+            _isHealty(p.equity, debtToken, p.debtInBase),
+            "repayDebt: bad debt, cannot repay debt"
+        );
+
+        emit RepayDebt(msg.sender, vault, repaidDebt, repaidDebtInBase);
+    }
+
+
+    /// @dev add additional equity (decrease debt ratio)
     /// @param debtToken    debtToken Address (not vault address)
     /// @param extraEquity  amount of additional equity
-    /// @param extraDebt  amount of additional debt in debtToken
-    /// @param extraDebtInBase  amount of additional debt in EVMOS
-    function decreasePositionDebt(
+    function addEquity(
         address debtToken,
-        uint256 extraEquity,
-        uint256 extraDebt,
-        uint256 extraDebtInBase
-    ) payable public {
-        address vault = tokenToVault[debtToken];
-
-        // harvest all interests before remove position
+        uint256 extraEquity
+    ) payable public override {
+        address vault = tokenToVault[debtToken];        
+        // harvest all interests before edit position
         _harvest(msg.sender, vault);
-        Position storage p = positions[positionIdOf[msg.sender][vault]];
+        Position storage p = positions[vault][positionIdOf[msg.sender][vault]];
 
-        // @TODO
-    };
+        p.equity += extraEquity;
 
-    // function changePosition(
-    //     address debtToken,
-    //     uint256 extraEquity,
-    //     uint256 repayDebtInBase,
-    //     uint256 extraDebtInBase
-    // ) payable public {
-    //     address vault = tokenToVault[debtToken];
+        _stake(
+            msg.sender,
+            debtToken,
+            extraEquity,
+            0
+        );
 
-    //     // harvest all interests before remove position
-    //     _harvest(msg.sender, vault);
+        require(
+            _isHealty(p.equity, debtToken, p.debtInBase),
+            "addEquity: bad debt, cannot add equity."
+        );
+    }
 
-    //     Position storage p = positions[positionIdOf[msg.sender][vault]];
-
-    //     uint256 equityAdded;
-    //     uint256 debtAdded;
-    //     uint256 debtInBaseAdded;
-    //     uint256 debtRepaid;
-    //     uint256 debtInBaseRepaid;
-
-    //     //@TODO
-    //     // 1. add extra equity
-    //     if(extraEquity > 0){
-    //         //@TODO
-    //         require(
-    //             msg.value == extraEquity,
-    //             "changePosition: msg.value != extraEquity"
-    //         );
-    //         equityAdded += extraEquity;
-    //     }
-    //     // 2. repay debt
-    //     if(repayDebtInBase > 0){
-    //         //@TODO
-    //         _swapAndRepay(
-    //             msg.sender,
-    //             debtToken,
-    //             vault,
-    //             uint256 debt,
-    //             uint256 minDy
-    //         ) 
-    //         equityAdded += repayDebtInBase;
-
-
-    //     }
-
-    //     // 3. extra debt in base
-    //     if(repayDebtInBase > 0){
-    //         equityAdded += extraEquity;
-    //         //@TODO
-    //     }
-        
-    // }
 
     /// @dev harvest(claim)할 수 있도록할지? 아니면 only auto-compound?
     function harvest(address debtToken) public {
@@ -439,16 +501,28 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function isKillable(
         uint256 positionId
-    ) public view returns(bool) {
-        
-    };
+    ) public override view returns(bool) {
+        return false;
+    }
     
-    function kill(uint256 positionId) external;
+    function kill(
+        uint256 positionId
+    ) public override onlyKiller {
+        require(isKillable(positionId), "Kill: still safe position.");
+    }
 
     /***********************
      * Only for Delegator *
      ***********************/
-    function delegate(uint256 amount) external;
+    function delegate(
+        uint256 amount
+    ) public onlyDelegator override {
 
-    function accrue(uint256 amount) payable external;
+    }
+
+    function accrue(
+        uint256 amount
+    ) payable public onlyDelegator override {
+
+    }
 }

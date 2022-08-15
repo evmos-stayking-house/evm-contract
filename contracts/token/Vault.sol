@@ -23,7 +23,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
     // Debt Amounts
     mapping(address => uint256) debtAmountOf;
-    uint256 public totalDebt;
+    uint256 public override totalDebt;
     /// @dev totalShare == totalSupply()
 
     uint256 minReservedBps;
@@ -129,7 +129,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     function loan(
         address user,
         uint256 amount
-    ) onlyStayking public override {
+    ) public override onlyStayking {
         debtAmountOf[user] += amount;
         totalDebt += amount;
         require(
@@ -140,13 +140,12 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         emit Loan(user, amount);
     }
 
-    /// @dev
-    /// both user and Stayking contract can repay user's debt.
-    /// user/contract should approve token first.
+    /// @dev Repay user's debt.
+    /// Stayking should approve token first.
     function repay(
         address user,
         uint256 amount
-    ) public override {
+    ) public override onlyStayking {
         debtAmountOf[user] -= amount;
         SafeToken.safeTransferFrom(token, user, address(this), amount);
         emit Repay(user, amount);
