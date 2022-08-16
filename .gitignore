@@ -6,5 +6,7 @@ node_modules
 .env.dev
 .env.prod
 
+configs/localhost
+
 cache
 typechain-types
