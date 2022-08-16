@@ -117,7 +117,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             emit AddVault(token, vault);
         else {
             require(
-                IVault(tokenToVault[token]).totalDebt() == 0,
+                IVault(tokenToVault[token]).totalDebtAmount() == 0,
                 "setVault: Debt remains on the existing vault."
             );
             emit ChangeVault(token, vault);
