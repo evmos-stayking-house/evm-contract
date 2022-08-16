@@ -29,6 +29,11 @@ interface IStayking {
 
     function killFactorBps() external view returns(uint256);
 
+    function debtAmountOf (
+        address user, 
+        address vault
+    ) external view returns(uint256 debt);
+
     /// @param debtToken    debtToken Address (not vault address)
     /// @param equity       equityAmount in EVMOS
     /// @param debtInBase   debtAmount in EVMOS

@@ -22,6 +22,8 @@ interface IVault {
 
     function totalDebt() external view returns(uint256);
 
+    function debtAmountOf(address user) external view returns(uint256);
+
     function utilizationRateBps() external view returns(uint256);
 
     /// @dev denominator = 1E18 

@@ -22,12 +22,12 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     address public override interestModel;
 
     // Debt Amounts
-    mapping(address => uint256) debtAmountOf;
+    mapping(address => uint256) public override debtAmountOf;
     uint256 public override totalDebt;
     /// @dev totalShare == totalSupply()
 
     uint256 minReservedBps;
-    uint256 yesterdayUtilRate = 0;
+    uint256 yesterdayUtilRate;
 
     uint lastSavedUtilizationRateTime;
 
