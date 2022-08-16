@@ -180,7 +180,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address vault,
         uint256 debtInBase
     ) private returns(uint256 debt) {
-        // calculate amount to loan
+        // calculate amount to borrow
         debt = swapHelper.getDx(token, BASE_TOKEN, debtInBase);
 
         IVault(vault).loan(user, debt);

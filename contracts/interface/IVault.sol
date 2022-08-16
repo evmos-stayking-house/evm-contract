@@ -4,14 +4,6 @@ pragma solidity ^0.8.4;
 
 interface IVault { 
 
-    event Deposit(address user, uint256 amount, uint256 share);
-    event Withdraw(address user, uint256 amount, uint256 share);
-    event Loan(address user, uint256 amount);
-    event Repay(address user, uint256 amount);
-    event PayInterest(uint256 totalDebt, uint256 interest);
-    event TransferDebtOwnership(address from, address to, uint256 amount);
-    event UtilizationRate(uint256 rateBps);
-
     function token() external returns(address);
     
     function stayking() external returns(address);
@@ -20,9 +12,9 @@ interface IVault {
 
     function totalAmount() external view returns(uint256);
 
-    function totalDebt() external view returns(uint256);
-
     function debtAmountOf(address user) external view returns(uint256);
+
+    function totalDebtAmount() external view returns(uint256);
 
     function utilizationRateBps() external view returns(uint256);
 
@@ -38,22 +30,22 @@ interface IVault {
     /******************************
      * Only for Stayking Contract *
      ******************************/
-    function loan(
-        address user,
-        uint256 amount
-    ) external;
+    function loan(address user, uint256 amount) external;
 
-    function repay(
-        address user,
-        uint256 amount
-    ) external;
+    function repay(address user, uint256 amount) external;
 
     function takeDebtOwnership(
         address from,
         uint256 amount
     ) external;
 
-    function payInterest() external;
+    function payInterest() external payable;
+
+    function pendRepay(address user, uint256 instantRepayment) external;
+
+    function calcPendingDebtInBase(address user) external view returns(uint256);
+
+    function repayPendingDebt(address user, uint256 minRepaidDebt) payable external;
 
     function updateStayking(address newStaykingAddress) external;
 
