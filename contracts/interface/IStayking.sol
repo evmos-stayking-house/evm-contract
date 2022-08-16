@@ -10,17 +10,6 @@ pragma solidity ^0.8.4;
  *************************************************************/
 interface IStayking { 
 
-    event Stake(address user, uint256 equity, uint256 debtInBase);
-    event Unstake(address user, uint256 equity, uint256 debtInBase);
-    event AddPosition(address user, uint256 equity, uint256 debtInBase, address vault, uint256 debt);
-    event RemovePosition(address user, uint256 equity, uint256 debtInBase, address vault, uint256 debt);
-    event AddEquity(address user, uint256 amount);
-    event RemoveEquity(address user, uint256 amount);
-    event AddDebt(address user, uint256 debtInBase, address vault, uint256 debt);
-    event RemoveDebt(address user, uint256 debtInBase, address vault, uint256 debt);
-    event Accrue(address delegator, uint256 amount);
-    event Harvest(address user, uint256 amount);
-
     // struct Position {
     //     address user;
     //     address vault;
@@ -29,16 +18,21 @@ interface IStayking {
     //     uint256 lastHarvestedAt;
     // }
 
-    function addVault(address token, address vault) external;
+    function setVault(address token, address vault) external;
     
     function tokenToVault(address token) external view returns(address vault);
 
-    function addWhitelistDelegator(address delegator) external;
+    function setWhitelistDelegatorStatus(address delegator, bool status) external;
 
     /// @dev min debtAmount in EVMOS (base token)
     function minDebtInBase() external view returns (uint256);
 
     function killFactorBps() external view returns(uint256);
+
+    function debtAmountOf (
+        address user, 
+        address vault
+    ) external view returns(uint256 debt);
 
     /// @param debtToken    debtToken Address (not vault address)
     /// @param equity       equityAmount in EVMOS
@@ -51,21 +45,37 @@ interface IStayking {
 
 
     /// @param debtToken    debtToken Address (not vault address)
-    function removePosition(uint256 debtToken) external;
+    function removePosition(address debtToken) external;
 
-    /// @dev Put more equity or increase debt.
+    /// @dev Borrow more debt (increase debt ratio)
+    /// @param debtToken    debtToken Address (not vault address)
+    /// @param extraDebtInBase  amount of additional debt in EVMOS
+    function addDebt(
+        address debtToken,
+        uint256 extraDebtInBase
+    ) external;
+
+    /// @dev Repay debt (decrease debt ratio)
+    /// @notice user should repay debt using debtToken
+    /// @notice user approve should be preceded
+    /// @param debtToken    debtToken Address (not vault address)
+    /// @param repaidDebt  amount of repaid debt in debtToken
+    function repayDebt(
+        address debtToken,
+        uint256 repaidDebt
+    ) external;
+
+    /// @dev add additional equity (decrease debt ratio)
     /// @param debtToken    debtToken Address (not vault address)
     /// @param extraEquity  amount of additional equity
-    /// @param extraDebtInBase  amount of additional debt in EVMOS
-    function editPosition(
+    function addEquity(
         address debtToken,
-        uint256 extraEquity,
-        uint256 extraDebtInBase
+        uint256 extraEquity
     ) payable external;
 
-    function isKillable(uint256 positionId) external view returns(bool);
+    function isKillable(address debtToken, uint256 positionId) external view returns(bool);
     
-    function kill(uint256 positionId) external;
+    function kill(address debtToken, uint256 positionId) external;
 
     /***********************
      * Only for Delegator *
