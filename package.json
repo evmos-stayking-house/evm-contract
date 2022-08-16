@@ -28,9 +28,17 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.3",
-    "@openzeppelin/contracts-upgradeable": "^4.7.3"
+    "@openzeppelin/contracts-upgradeable": "^4.7.3",
+    "dotenv": "^16.0.1",
+    "hardhat-craftform": "^0.9.9",
+    "hardhat-deploy": "^0.11.12"
   },
   "scripts": {
-    "compile": "npx hardhat compile"
+    "compile": "npx hardhat compile",
+    "node": "rm -rf deployments/localhost && rm -rf configs/localhost && npx hardhat node",
+    "test": "rm -rf deployments/hardhat && rm -rf configs/hardhat && npx hardhat test --network hardhat",
+    "deploy:localhost": "npx hardhat run scripts/deploy-local.ts --network localhost",
+    "deploy:sooho": "npx hardhat run scripts/deploy-sooho.ts --network sooho",
+    "deploy:testnet": "npx hardhat run scripts/deploy-testnet.ts --network testnet"
   }
 }

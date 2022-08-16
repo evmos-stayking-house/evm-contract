@@ -73,4 +73,7 @@ contract MockSwap {
             SafeToken.safeTransfer(tokenY, msg.sender, dy);
         }
     }
+
+    /// @dev Fallback function to accept EVMOS.
+    receive() external payable {}
 }

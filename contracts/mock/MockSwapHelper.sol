@@ -8,7 +8,7 @@ import "./MockSwap.sol";
 contract MockSwapHelper is ISwapHelper {
 
     MockSwap public swap;
-    constructor(address swap_){
+    constructor(address payable swap_){
         swap = MockSwap(swap_);
     }
 
