@@ -75,7 +75,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         address _token,
         address _interestModel,
         uint256 _minReservedBps
-    ) external onlyInitializing {
+    ) external initializer {
         require(_stayking != address(0), "Vault: Stayking address is zero");
         require(_token != address(0), "Vault: Base Token is zero address");
         
@@ -267,4 +267,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         uint256 repaidDebtShare = pendingDebtAmountToShare(repaidDebtAmount);
         pendingDebtShareOf[user] -= repaidDebtShare;
     }
+
+    /// @dev Fallback function to accept EVMOS.
+    receive() external payable {}
 }

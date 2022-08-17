@@ -83,7 +83,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function __Stayking_init(
         address swapHelper_
-    ) external onlyInitializing {
+    ) external initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
 
@@ -520,4 +520,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     ) payable public onlyDelegator override {
 
     }
+
+    /// @dev Fallback function to accept EVMOS.
+    receive() external payable {}
 }
