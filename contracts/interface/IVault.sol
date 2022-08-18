@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.4;
+import "./ISwapHelper.sol";
 
 
 interface IVault { 
@@ -23,31 +24,46 @@ interface IVault {
 
     function saveUtilizationRateBps() external;
 
-    function deposit(uint256 amount) external returns(uint256);
+    function deposit(uint256 amount) external returns(uint256 share);
 
-    function withdraw(uint256 share) external returns(uint256);
+    function withdraw(uint256 share) external returns(uint256 amount);
+
+    function getPendingDebt(address user) external view returns(uint256 debt);
+    
+    function getPendingDebtInBase(address user) external view returns(uint256 debtInBase);
+
+    function getBaseIn(uint256 tokenOut) external view returns(uint256 baseIn);
+
+    function getBaseOut(uint256 tokenIn) external view returns(uint256 baseOut);
+
+    function getTokenIn(uint256 baseOut) external view returns(uint256 tokenIn);
+
+    function getTokenOut(uint256 baseIn) external view returns(uint256 tokenOut);
+
 
     /******************************
      * Only for Stayking Contract *
      ******************************/
-    function loan(address user, uint256 amount) external;
+    function loan(address user, uint256 debtInBase) external returns(uint256 debt);
 
-    function repay(address user, uint256 amount) external;
+    function repayInToken(address user, uint256 debt) external;
+
+    function repayInBase(address user, uint256 minRepaid) payable external returns(uint256 repaid);
 
     function takeDebtOwnership(
         address from,
         uint256 amount
     ) external;
 
-    function payInterest() external payable;
+    function payInterest(uint256 minPaidInterest) external payable;
 
-    function pendRepay(address user, uint256 instantRepayment) external;
+    function pendRepay(address user) external;
 
-    function calcPendingDebtInBase(address user) external view returns(uint256);
+    function repayPendingDebt(address user, uint256 minRepaidDebt) payable external returns(uint256);
 
-    function repayPendingDebt(address user, uint256 minRepaidDebt) payable external;
-
-    function updateStayking(address newStaykingAddress) external;
+    function updateInterestModel(address interestModel) external;
+    
+    function updateSwapHelper(address swapHelper) external;
 
     function updateMinReservedBps(uint256 newMinReservedBps) external;
 }

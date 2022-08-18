@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.3;
 
-interface IStakedEvmos { 
+interface IUnbondedEvmos { 
 
     event Lock(address user, uint256 lockedUntil);
     event Supply(uint256 amount);
@@ -14,9 +14,10 @@ interface IStakedEvmos {
         uint256 lockedUntil
     ) external;
 
-    function supplyUnstakedToken() payable external;
+    function supplyUnbondedToken() payable external;
 
     function minter() external view returns(address);
+    
     function setMinter(address newMinter) external;
 
 }

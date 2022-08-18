@@ -22,7 +22,8 @@ interface IStayking {
     
     function tokenToVault(address token) external view returns(address vault);
 
-    function setWhitelistDelegatorStatus(address delegator, bool status) external;
+    function changeDelegator(address delegator) external;
+    // function setWhitelistDelegatorStatus(address delegator, bool status) external;
 
     /// @dev min debtAmount in EVMOS (base token)
     function minDebtInBase() external view returns (uint256);
@@ -30,7 +31,7 @@ interface IStayking {
     function killFactorBps() external view returns(uint256);
 
     function debtAmountOf (
-        address user, 
+        address user,
         address vault
     ) external view returns(uint256 debt);
 
@@ -65,6 +66,11 @@ interface IStayking {
         uint256 repaidDebt
     ) external;
 
+    function repayDebtInBase(
+        address debtToken,
+        uint256 minRepaid
+    ) payable external;
+
     /// @dev add additional equity (decrease debt ratio)
     /// @param debtToken    debtToken Address (not vault address)
     /// @param extraEquity  amount of additional equity
@@ -80,8 +86,6 @@ interface IStayking {
     /***********************
      * Only for Delegator *
      ***********************/
-    function delegate(uint256 amount) external;
-
-    function accrue(uint256 amount) payable external;
+    function accrue(uint256 currentTotalStaked) payable external;
 
 }
