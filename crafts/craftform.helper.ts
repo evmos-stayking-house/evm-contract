@@ -4,9 +4,9 @@ import { BaseCraft, BaseConfig, CraftFactory, DeployArgsBase } from 'hardhat-cra
 declare module "hardhat/types/runtime" {
     interface ICraftformHelper {
         contract(contract: "IInterestModel"): CraftFactories.IInterestModelCraftFactory;
-        contract(contract: "IStakedEvmos"): CraftFactories.IStakedEvmosCraftFactory;
         contract(contract: "IStayking"): CraftFactories.IStaykingCraftFactory;
         contract(contract: "ISwapHelper"): CraftFactories.ISwapHelperCraftFactory;
+        contract(contract: "IUnbondedEvmos"): CraftFactories.IUnbondedEvmosCraftFactory;
         contract(contract: "IVault"): CraftFactories.IVaultCraftFactory;
         contract(contract: "ContextUpgradeable"): CraftFactories.ContextUpgradeableCraftFactory;
         contract(contract: "ERC20"): CraftFactories.ERC20CraftFactory;

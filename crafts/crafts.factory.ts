@@ -4,9 +4,9 @@ import * as Crafts from './crafts';
 import * as Deploy from './deploy.args';
 
 export type IInterestModelCraftFactory = CraftFactory<Configs.IInterestModelConfig, Crafts.IInterestModelCraft, Deploy.IInterestModelDeployArgs>;
-export type IStakedEvmosCraftFactory = CraftFactory<Configs.IStakedEvmosConfig, Crafts.IStakedEvmosCraft, Deploy.IStakedEvmosDeployArgs>;
 export type IStaykingCraftFactory = CraftFactory<Configs.IStaykingConfig, Crafts.IStaykingCraft, Deploy.IStaykingDeployArgs>;
 export type ISwapHelperCraftFactory = CraftFactory<Configs.ISwapHelperConfig, Crafts.ISwapHelperCraft, Deploy.ISwapHelperDeployArgs>;
+export type IUnbondedEvmosCraftFactory = CraftFactory<Configs.IUnbondedEvmosConfig, Crafts.IUnbondedEvmosCraft, Deploy.IUnbondedEvmosDeployArgs>;
 export type IVaultCraftFactory = CraftFactory<Configs.IVaultConfig, Crafts.IVaultCraft, Deploy.IVaultDeployArgs>;
 export type ContextUpgradeableCraftFactory = CraftFactory<Configs.ContextUpgradeableConfig, Crafts.ContextUpgradeableCraft, Deploy.ContextUpgradeableDeployArgs>;
 export type ERC20CraftFactory = CraftFactory<Configs.ERC20Config, Crafts.ERC20Craft, Deploy.ERC20DeployArgs>;

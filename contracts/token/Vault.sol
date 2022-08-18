@@ -18,10 +18,11 @@ import "../lib/utils/SafeToken.sol";
  *************************************************************/
 contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
-    address public constant BASE_TOKEN = address(0);
+    address private constant BASE_TOKEN = address(0);
 
     event Deposit(address user, uint256 amount, uint256 share);
     event Withdraw(address user, uint256 amount, uint256 share);
+    // kor) Loan과 Repay는 Stayking의 ChangePosition 등의 이벤트와 중복되는데, 없애도 좋을지?
     event Loan(address user, uint256 debtAmount);
     event Repay(address user, uint256 debtAmount);
     event PayInterest(uint256 paidInterest, uint256 leftInterest);
@@ -71,6 +72,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     function __Vault_init(
         string calldata _name,
         string calldata _symbol,
+        address _swapHelper,
         address _stayking,
         address _token,
         address _interestModel,
@@ -82,10 +84,11 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         __ERC20_init(_name, _symbol);
         __Ownable_init();
 
-        stayking = _stayking;
         token = _token;
-        interestModel = _interestModel;
-        minReservedBps = _minReservedBps;
+        stayking = _stayking;
+        updateMinReservedBps(_minReservedBps);
+        updateInterestModel(_interestModel);
+        updateSwapHelper(_swapHelper);
 
         // @TODO changed
         lastSavedUtilizationRateTime = block.timestamp - 
@@ -97,12 +100,16 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         return IERC20(token).balanceOf(address(this)) + totalDebtAmount;
     }
 
-    function updateMinReservedBps(uint256 newMinReservedBps) public override onlyOwner {
-        minReservedBps = newMinReservedBps;
+    function updateMinReservedBps(uint256 _minReservedBps) public override onlyOwner {
+        minReservedBps = _minReservedBps;
     }
 
-    function updateStayking(address newStaykingAddress) public override onlyOwner {
-        stayking = newStaykingAddress;
+    function updateInterestModel(address _interestModel) public override onlyOwner {
+        interestModel = _interestModel;
+    }
+    
+    function updateSwapHelper(address _swapHelper) public override onlyOwner {
+        swapHelper = ISwapHelper(_swapHelper);
     }
 
     function amountToShare(
@@ -156,6 +163,69 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
             emit UtilizationRate(yesterdayUtilRate);
         }
     }
+
+
+    /******************
+     * Swap Functions *
+    *******************/
+    /**
+     @dev
+     baseAmount: amount of EVMOS
+     tokenAmount: amount of vault token (e.g. ATOM, USDC, ...etc)
+     */
+
+    /// @dev vault token -> baseToken(EVMOS) (known baseAmount)
+    function _swapToBase(uint256 baseAmount) private returns(uint256 tokenAmount) {
+        // 1. calculate amountIn
+        tokenAmount = getTokenIn(baseAmount);
+        // 2. approve to swapHelper
+        SafeToken.safeApprove(token, address(swapHelper), tokenAmount);
+        // 3. swap
+        swapHelper.exchange(token, BASE_TOKEN, tokenAmount, baseAmount);
+    }
+
+    /// @dev baseToken(EVMOS) -> vault token (known baseAmount)
+    function _swapFromBase(uint256 baseAmount, uint256 minDy) private returns(uint256 tokenAmount) {
+        return swapHelper.exchange{value: baseAmount}(BASE_TOKEN, token, baseAmount, minDy);
+    }
+
+    /**
+     @notice swapHelper calc functions
+     function naming: get[ target of token ][ direction ]
+      * target:     Base(EVMOS)  / Token
+      * direction:  In(=getDx) / Out(=getDy)
+
+      e.g. function getBaseIn()
+      -> this func calculates how much EVMOS is needed to swap EVMOS to Token.
+     */
+    
+    /// @dev calc (?)EVMOS = $ token
+    function getBaseIn(
+        uint256 tokenOut
+    ) public override view returns(uint256 baseIn) {
+        return swapHelper.getDx(BASE_TOKEN, token, tokenOut);
+    }
+
+    /// @dev calc $ EVMOS = (?)token
+    function getBaseOut(
+        uint256 tokenIn
+    ) public override view returns(uint256 baseOut) {
+        return swapHelper.getDy(BASE_TOKEN, token, tokenIn);
+    }
+
+    /// @dev calc (?)token = $ EVMOS
+    function getTokenIn(
+        uint256 baseOut
+    ) public override view returns(uint256 tokenIn) {
+        return swapHelper.getDx(token, BASE_TOKEN, baseOut);
+    }
+    
+    /// @dev calc $ token = (?)EVMOS
+    function getTokenOut(
+        uint256 baseIn
+    ) public override view returns(uint256 tokenOut) {
+        return swapHelper.getDy(token, BASE_TOKEN, baseIn);
+    }
     
     /************************************
      * interface IVault Implementations
@@ -181,29 +251,46 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     /// @notice loan is only for Stayking contract.
     function loan(
         address user,
-        uint256 amount
-    ) public override onlyStayking {
-        debtAmountOf[user] += amount;
-        totalDebtAmount += amount;
+        uint256 debtInBase
+    ) public override onlyStayking returns (uint256 debt) {
+        ///@dev swap token -> (amountInBase)EVMOS
+        debt = _swapToBase(debtInBase);
+        debtAmountOf[user] += debt;
+        totalDebtAmount += debt;
         require(
             totalDebtAmount * 1E4 <= totalAmount() * minReservedBps,
             "Loan: Cant' loan debt anymore."
         );
-        SafeToken.safeTransfer(token, msg.sender, amount);
-        emit Loan(user, amount);
+        SafeToken.safeTransferEVMOS(msg.sender, debt);
+        emit Loan(user, debt);
     }
 
     // @TODO Should approve MAX_UINT?
     /// @dev Repay user's debt.
     /// Stayking should approve token first.
-    function repay(
+    function _repay(
+        address user,
+        uint256 amount
+    ) private {
+        debtAmountOf[user] -= amount;
+        totalDebtAmount -= amount;
+        emit Repay(user, amount);
+    }
+
+    function repayInToken(
         address user,
         uint256 amount
     ) public override onlyStayking {
-        debtAmountOf[user] -= amount;
-        totalDebtAmount -= amount;
         SafeToken.safeTransferFrom(token, user, address(this), amount);
-        emit Repay(user, amount);
+        _repay(user, amount);
+    }
+
+    function repayInBase(
+        address user,
+        uint256 minRepaid
+    ) public payable override onlyStayking returns(uint256 repaid) {
+        repaid = _swapFromBase(msg.value, minRepaid);
+        _repay(user, repaid);
     }
 
     function takeDebtOwnership(
@@ -215,8 +302,8 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         emit TransferDebtOwnership(from, msg.sender, amount);
     }
 
-    function payInterest() public payable override onlyStayking {
-        uint256 paidInterest = swapHelper.exchange(BASE_TOKEN, token, msg.value, 1);
+    function payInterest(uint256 minPaidInterest) public payable override onlyStayking {
+        uint256 paidInterest = _swapFromBase(msg.value, minPaidInterest);
         require(accInterest >= paidInterest, "msg.value is greater than accumulated interest.");
         unchecked {
             accInterest -= paidInterest;
@@ -225,47 +312,43 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     }
 
     /// @dev pending repay debt because of EVMOS Unstaking's 14 days lock.
-    /// @notice User can instantly repay some of their debts with their tokens.
     /// Stayking should approve token first.
     function pendRepay(
-        address user,
-        uint256 instantRepayment
+        address user
     ) public override onlyStayking {
-        if(instantRepayment > 0){
-            repay(user, instantRepayment);
-        }
-
         uint256 pendingDebtAmount = debtAmountOf[user];
         uint256 pendingDebtShare = pendingDebtAmountToShare(pendingDebtAmount);
-        pendingDebtShareOf[user] = pendingDebtShare;
+        pendingDebtShareOf[user] += pendingDebtShare;
         totalPendingDebtShare += pendingDebtShare;
         totalPendingDebtAmount += pendingDebtAmount;
     }
 
-    function calcPendingDebtInBase(
+    function getPendingDebt(
         address user
     ) public view override returns(uint256){
-        return swapHelper.getDx(
-            BASE_TOKEN, 
-            token,
-            pendingDebtShareToAmount(pendingDebtShareOf[user])
-        );
+        return pendingDebtShareToAmount(pendingDebtShareOf[user]);
+    }
+
+    function getPendingDebtInBase(
+        address user
+    ) public view override returns(uint256){
+        return getBaseIn(getPendingDebt(user));
     }
 
     /// @dev stayking should send with value: repayingDebt 
     function repayPendingDebt(
         address user,
         uint256 minRepaidDebt
-    ) public payable override onlyStayking {
-
-        uint256 repaidDebtAmount = swapHelper.exchange(BASE_TOKEN, token, msg.value, minRepaidDebt);
+    ) public payable override onlyStayking returns(uint256 repaidDebtAmount) {
+        repaidDebtAmount = _swapFromBase(msg.value, minRepaidDebt);
+        uint256 repaidDebtShare = pendingDebtAmountToShare(repaidDebtAmount);
         require(
-            repaidDebtAmount <= pendingDebtShareToAmount(pendingDebtShareOf[user]),
+            repaidDebtShare <= pendingDebtShareOf[user],
             "repayPendingDebt: too much msg.value to repay debt"
         );
-
-        uint256 repaidDebtShare = pendingDebtAmountToShare(repaidDebtAmount);
-        pendingDebtShareOf[user] -= repaidDebtShare;
+        unchecked {
+            pendingDebtShareOf[user] -= repaidDebtShare;
+        }
     }
 
     /// @dev Fallback function to accept EVMOS.

@@ -3,9 +3,9 @@ import * as Typechain from '../typechain-types';
 import * as Configs from './configs';
 
 export type IInterestModelCraft = CraftType<Typechain.IInterestModel, Configs.IInterestModelConfig>;
-export type IStakedEvmosCraft = CraftType<Typechain.IStakedEvmos, Configs.IStakedEvmosConfig>;
 export type IStaykingCraft = CraftType<Typechain.IStayking, Configs.IStaykingConfig>;
 export type ISwapHelperCraft = CraftType<Typechain.ISwapHelper, Configs.ISwapHelperConfig>;
+export type IUnbondedEvmosCraft = CraftType<Typechain.IUnbondedEvmos, Configs.IUnbondedEvmosConfig>;
 export type IVaultCraft = CraftType<Typechain.IVault, Configs.IVaultConfig>;
 export type ContextUpgradeableCraft = CraftType<Typechain.ContextUpgradeable, Configs.ContextUpgradeableConfig>;
 export type ERC20Craft = CraftType<Typechain.ERC20, Configs.ERC20Config>;
