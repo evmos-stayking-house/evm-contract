@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "../interface/IStayking.sol";
 import "../interface/IVault.sol";
 import "../interface/ISwapHelper.sol";
-import "../interface/IUnbondedEVMOS.sol";
+import "../interface/IUnbondedEvmos.sol";
 import "../lib/utils/SafeToken.sol";
 import "../lib/OwnableUpgradeable.sol";
 import "../lib/ReentrancyGuardUpgradeable.sol";

@@ -61,9 +61,9 @@ interface IVault {
 
     function repayPendingDebt(address user, uint256 minRepaidDebt) payable external returns(uint256);
 
-    function updateInterestModel(address interestModel) external;
+    function updateInterestModel(address newInterestModel) external;
     
-    function updateSwapHelper(address swapHelper) external;
+    function updateSwapHelper(address newSwapHelper) external;
 
     function updateMinReservedBps(uint256 newMinReservedBps) external;
 }

@@ -4,15 +4,15 @@ import { BigNumberish } from 'ethers';
 // IInterestModel
 export type IInterestModelArgs = [] | undefined;
 export type IInterestModelDeployArgs = DeployArgs<IInterestModelArgs>;
-// IStakedEvmos
-export type IStakedEvmosArgs = [] | undefined;
-export type IStakedEvmosDeployArgs = DeployArgs<IStakedEvmosArgs>;
 // IStayking
 export type IStaykingArgs = [] | undefined;
 export type IStaykingDeployArgs = DeployArgs<IStaykingArgs>;
 // ISwapHelper
 export type ISwapHelperArgs = [] | undefined;
 export type ISwapHelperDeployArgs = DeployArgs<ISwapHelperArgs>;
+// IUnbondedEvmos
+export type IUnbondedEvmosArgs = [] | undefined;
+export type IUnbondedEvmosDeployArgs = DeployArgs<IUnbondedEvmosArgs>;
 // IVault
 export type IVaultArgs = [] | undefined;
 export type IVaultDeployArgs = DeployArgs<IVaultArgs>;
@@ -54,12 +54,12 @@ export type EvmoSwapHelperArgs = [address];
 export type EvmoSwapHelperDeployArgs = DeployArgs<EvmoSwapHelperArgs>;
 // Stayking
 export type StaykingArgs = [] | undefined;
-export type StaykingProxyProps = ProxyProps<"__Stayking_init", [address]>;
+export type StaykingProxyProps = ProxyProps<"__Stayking_init", [address, address]>;
 export type StaykingDeployArgs = DeployArgs<StaykingArgs, StaykingProxyProps>;
 // TripleSlopeModel
 export type TripleSlopeModelArgs = [] | undefined;
 export type TripleSlopeModelDeployArgs = DeployArgs<TripleSlopeModelArgs>;
 // Vault
 export type VaultArgs = [] | undefined;
-export type VaultProxyProps = ProxyProps<"__Vault_init", [string, string, address, address, address, BigNumberish]>;
+export type VaultProxyProps = ProxyProps<"__Vault_init", [string, string, address, address, address, address, BigNumberish]>;
 export type VaultDeployArgs = DeployArgs<VaultArgs, VaultProxyProps>;

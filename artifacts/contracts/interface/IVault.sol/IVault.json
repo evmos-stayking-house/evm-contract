@@ -11,25 +11,6 @@
           "type": "address"
         }
       ],
-      "name": "calcPendingDebtInBase",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        }
-      ],
       "name": "debtAmountOf",
       "outputs": [
         {
@@ -53,11 +34,49 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "share",
           "type": "uint256"
         }
       ],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "tokenOut",
+          "type": "uint256"
+        }
+      ],
+      "name": "getBaseIn",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "baseIn",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "tokenIn",
+          "type": "uint256"
+        }
+      ],
+      "name": "getBaseOut",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "baseOut",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -67,6 +86,82 @@
         {
           "internalType": "uint256",
           "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "getPendingDebt",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "debt",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "getPendingDebtInBase",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "debtInBase",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "baseOut",
+          "type": "uint256"
+        }
+      ],
+      "name": "getTokenIn",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "tokenIn",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "baseIn",
+          "type": "uint256"
+        }
+      ],
+      "name": "getTokenOut",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "tokenOut",
           "type": "uint256"
         }
       ],
@@ -95,17 +190,29 @@
         },
         {
           "internalType": "uint256",
-          "name": "amount",
+          "name": "debtInBase",
           "type": "uint256"
         }
       ],
       "name": "loan",
-      "outputs": [],
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "debt",
+          "type": "uint256"
+        }
+      ],
       "stateMutability": "nonpayable",
       "type": "function"
     },
     {
-      "inputs": [],
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "minPaidInterest",
+          "type": "uint256"
+        }
+      ],
       "name": "payInterest",
       "outputs": [],
       "stateMutability": "payable",
@@ -117,11 +224,6 @@
           "internalType": "address",
           "name": "user",
           "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "instantRepayment",
-          "type": "uint256"
         }
       ],
       "name": "pendRepay",
@@ -138,11 +240,35 @@
         },
         {
           "internalType": "uint256",
-          "name": "amount",
+          "name": "minRepaid",
           "type": "uint256"
         }
       ],
-      "name": "repay",
+      "name": "repayInBase",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "repaid",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "debt",
+          "type": "uint256"
+        }
+      ],
+      "name": "repayInToken",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -161,7 +287,13 @@
         }
       ],
       "name": "repayPendingDebt",
-      "outputs": [],
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
       "stateMutability": "payable",
       "type": "function"
     },
@@ -245,6 +377,19 @@
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "newInterestModel",
+          "type": "address"
+        }
+      ],
+      "name": "updateInterestModel",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "uint256",
           "name": "newMinReservedBps",
           "type": "uint256"
@@ -259,11 +404,11 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "newStaykingAddress",
+          "name": "newSwapHelper",
           "type": "address"
         }
       ],
-      "name": "updateStayking",
+      "name": "updateSwapHelper",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -293,7 +438,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "amount",
           "type": "uint256"
         }
       ],
