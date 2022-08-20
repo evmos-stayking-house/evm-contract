@@ -9,5 +9,7 @@ node_modules
 configs/localhost
 configs/hardhat
 
+artifacts
+
 cache
 typechain-types
