@@ -235,24 +235,6 @@
           "internalType": "address",
           "name": "token",
           "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "vault",
-          "type": "address"
-        }
-      ],
-      "name": "setVault",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
         }
       ],
       "name": "tokenToVault",
@@ -264,6 +246,24 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "vault",
+          "type": "address"
+        }
+      ],
+      "name": "updateVault",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     }
   ],

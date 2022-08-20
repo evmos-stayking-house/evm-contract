@@ -50,7 +50,7 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     }
     mapping(address => LockedQueue) public lockedOf;
     mapping(address => uint256) _balances;
-    uint256 public totalSupply;
+    uint256 public override totalSupply;
 
     function __UnbondedEvmos_init(
         address minter_,
@@ -129,8 +129,10 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
             return unlockable - pendingDebtInBase;
         }
         else {
-            /// @dev 빚을 다 갚을 수 있는지 없는지?
-            revert();
+            /// @dev kor) 빚을 다 갚을 수 있는지 없는지?
+            // case 1. 빚 못 갚으면 revert
+            // revert();
+            // case 2. 빚 못 갚아도 일단 갚을 수 있는 것만 repay
             IVault(vault).repayInBase{value: unlockable}(account, minRepaid);
             return 0;
         }
