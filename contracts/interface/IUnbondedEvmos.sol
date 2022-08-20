@@ -3,21 +3,28 @@ pragma solidity ^0.8.3;
 
 interface IUnbondedEvmos { 
 
-    event Lock(address user, uint256 lockedUntil);
-    event Supply(uint256 amount);
-    event Withdraw(address user, uint256 amount);
+    function balanceOf(address account) external view returns (uint256);
 
-    function withdrawable() external view returns (uint256);
+    function totalSupply() external view returns (uint256);
 
     function mintLockedToken(
         address to,
-        uint256 lockedUntil
+        address vault,
+        uint256 amount,
+        uint256 time
     ) external;
+
+    function unlock(uint256 minRepaid) external;
 
     function supplyUnbondedToken() payable external;
 
-    function minter() external view returns(address);
+    function isMinter(address account) external view returns(bool);
     
-    function setMinter(address newMinter) external;
+    function updateMinterStatus(address account, bool status) external;
 
-}
+    function getUnlockable(address account) external view returns(uint256 unlockable, uint256 debt);
+
+    function isKillable(uint256 lockedId) external returns (bool);
+
+    function kill(uint256 lockedId) external;
+}   

@@ -23,8 +23,8 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     // Operation Events
     event AddVault(address token, address vault);
-    event ChangeVault(address token, address vault);
-    event ChangeConfigs(uint256 minDebtInBase, uint256 killFactorBps);
+    event UpdateVault(address token, address vault);
+    event UpdateConfigs(uint256 minDebtInBase, uint256 killFactorBps);
     event ChangeDelegator(address delegator);
 
     address public delegator;
@@ -88,7 +88,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         __ReentrancyGuard_init();
 
         // @TODO policy
-        setConfigs(
+        updateConfigs(
             10e18,  // minDebtInBase (10EVMOS)
             8000    // killFactorBps
         );
@@ -108,7 +108,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         emit ChangeDelegator(_delegator);
     }
 
-    function setVault(
+    function updateVault(
         address token, 
         address vault
     ) public override onlyOwner {
@@ -119,9 +119,9 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         else {
             require(
                 IVault(tokenToVault[token]).totalDebtAmount() == 0,
-                "setVault: Debt remains on the existing vault."
+                "updateVault: Debt remains on the existing vault."
             );
-            emit ChangeVault(token, vault);
+            emit UpdateVault(token, vault);
         }
 
         tokenToVault[token] = vault;
@@ -134,13 +134,13 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         );
     }
 
-    function setConfigs(
+    function updateConfigs(
         uint256 _minDebtInBase,
         uint256 _killFactorBps
     ) public onlyOwner {
         minDebtInBase = _minDebtInBase;
         killFactorBps = _killFactorBps;
-        emit ChangeConfigs(_minDebtInBase, _killFactorBps);
+        emit UpdateConfigs(_minDebtInBase, _killFactorBps);
     }
 
     /***********************
@@ -163,6 +163,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function _unstake(
         Position storage p,
+        address vault,
         uint256 share
     ) private returns(uint256 amount) {
         amount = shareToAmount(share);
@@ -171,7 +172,12 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         totalShare -= share;
 
         /// @dev +15days?
-        uEVMOS.mintLockedToken(p.user, block.timestamp + 15);
+        uEVMOS.mintLockedToken(
+            p.user, 
+            vault,
+            amount,
+            block.timestamp + 15 days
+        );
 
         emit Unstake(delegator, p.user, amount, share);
     }
@@ -261,7 +267,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         /// @dev amount in EVMOS that user have to repay
         uint256 currentDebtInBase = IVault(vault).getBaseIn(debtAmount);
 
-        uint256 unstakedAmount = _unstake(p, p.share);
+        uint256 unstakedAmount = _unstake(p, vault, p.share);
         require(
             unstakedAmount >= currentDebtInBase,
             "removePosition: Bad debt"
@@ -409,7 +415,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         (bool healthy, uint256 debtInBase) = _isHealthy(vault, p.share, debt);
         require(healthy, "kill: still safe position.");
 
-        uint256 unStakedAmount = _unstake(p, p.share);
+        uint256 unStakedAmount = _unstake(p, vault, p.share);
 
         emit Kill(
             msg.sender, 
