@@ -3,12 +3,14 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { toBN } from "../utils"
 
 export const deployERC20 = async (deployer: SignerWithAddress, name: string, symbol: string) => {
-    const Token = await craftform
-        .contract("ERC20Ownable")
-        .deploy(symbol, {
-            from: deployer.address,
-            args: [name, symbol]
-        })
+    const Token = await craftform.contract("ERC20Ownable")
+        .deploy(
+            symbol, 
+            {
+                from: deployer.address,
+                args: [name, symbol]
+            }
+        );
     
     // self mint token
     const deployerBalance = await Token.balanceOf(deployer.address)

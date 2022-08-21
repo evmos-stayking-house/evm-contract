@@ -23,17 +23,26 @@ const config: HardhatUserConfig = {
         sooho: {
             chainId: 9000,
             url: "http://15.164.214.195:8545",
-            accounts: [process.env.DEPLOYER_PRIVATE_KEY!]
+            accounts: [
+                process.env.DEPLOYER_PRIVATE_KEY!,
+                process.env.DELEGATOR_PRIVATE_KEY!
+            ]
         },
         testnet: {
             chainId: 9000,
             url: "https://eth.bd.evmos.dev:8545",
-            accounts: [process.env.DEPLOYER_PRIVATE_KEY!]
+            accounts: [
+                process.env.DEPLOYER_PRIVATE_KEY!,
+                process.env.DELEGATOR_PRIVATE_KEY!
+            ]
         },
         mainnet: {
             chainId: 9001,
             url: "https://eth.bd.evmos.org:8545",
-            accounts: [process.env.DEPLOYER_PRIVATE_KEY!]
+            accounts: [
+                process.env.DEPLOYER_PRIVATE_KEY!,
+                process.env.DELEGATOR_PRIVATE_KEY!
+            ]
         }
     }
 }
