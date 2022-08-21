@@ -69,7 +69,7 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         Modifier
      *************/
     modifier onlyMinter(){
-        require(isMinter[msg.sender], "UnbondedEvmos: Not minter.");
+        require(isMinter[msg.sender], "uEVMOS: Not minter.");
         _;
     }
 
@@ -110,7 +110,7 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         require(account != address(0), "uEVMOS: burn from the zero address");
 
         uint256 accountBalance = _balances[account];
-        require(accountBalance >= amount, "ERC20: burn amount exceeds balance");
+        require(accountBalance >= amount, "uEVMOS: burn amount exceeds balance");
         unchecked {
             _balances[account] = accountBalance - amount;
         }
