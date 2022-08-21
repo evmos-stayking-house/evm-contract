@@ -171,11 +171,14 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         totalAmount -= amount;
         totalShare -= share;
 
+        IVault(vault).pendRepay(p.user);
+        
         uEVMOS.mintLockedToken(
             p.user, 
             vault,
             amount
         );
+
 
         emit Unstake(delegator, p.user, amount, share);
     }
