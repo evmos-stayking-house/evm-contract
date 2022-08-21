@@ -61,7 +61,7 @@ export type TripleSlopeModelArgs = [] | undefined;
 export type TripleSlopeModelDeployArgs = DeployArgs<TripleSlopeModelArgs>;
 // UnbondedEvmos
 export type UnbondedEvmosArgs = [] | undefined;
-export type UnbondedEvmosProxyProps = ProxyProps<"__UnbondedEvmos_init", [address, BigNumberish, BigNumberish]>;
+export type UnbondedEvmosProxyProps = ProxyProps<"__UnbondedEvmos_init", [address, BigNumberish]>;
 export type UnbondedEvmosDeployArgs = DeployArgs<UnbondedEvmosArgs, UnbondedEvmosProxyProps>;
 // Vault
 export type VaultArgs = [] | undefined;

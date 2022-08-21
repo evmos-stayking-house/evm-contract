@@ -13,7 +13,7 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     event Supply(uint256 amount);
     event Withdraw(address account, uint256 amount);
     event UpdateMinterStatus(address account, bool status);
-    event UpdateConfigs(uint256 killFactorBps, uint256 liquidateFeeBps);
+    event UpdateConfigs(uint256 unbondingInterval);
 
     mapping(address => bool) public override isMinter;
 
@@ -26,10 +26,6 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
 
     /// @notice kor) 논의 필요
     uint256 public unbondLimit = 7;
-
-    /// @notice kor) 필요 없을 수 있다.
-    uint256 public killFactorBps;
-    uint256 public liquidateFeeBps;
 
     struct Locked {
         bool received;
@@ -59,15 +55,11 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
 
     function __UnbondedEvmos_init(
         address minter_,
-        uint256 killFactorBps_,
-        uint256 liquidateFeeBps_
+        uint256 unbondingInterval_
     ) external initializer {
         __Ownable_init();
         updateMinterStatus(minter_, true);
-        updateConfigs(
-            killFactorBps_,
-            liquidateFeeBps_
-        );
+        updateConfigs(unbondingInterval_);
     }
 
     /**************
@@ -87,12 +79,10 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     }
 
     function updateConfigs(
-        uint256 _killFactorBps,
-        uint256 _liquidateFeeBps
+        uint256 _unbondingInterval
     ) public onlyOwner {
-        liquidateFeeBps = _liquidateFeeBps;
-        killFactorBps = _killFactorBps;
-        emit UpdateConfigs(_killFactorBps, _liquidateFeeBps);
+        unbondingInterval = _unbondingInterval;
+        emit UpdateConfigs(_unbondingInterval);
     }
 
     /*******************
