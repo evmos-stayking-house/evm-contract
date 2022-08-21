@@ -1,14 +1,13 @@
 import { ethers } from "hardhat";
-import { useCraftform } from "hardhat-craftform"
 import { deployERC20 } from "../setup/erc20";
 import { deployMockSwap } from "../setup/mockswap";
 import { deployStayking } from "../setup/Stayking";
 import { deployTripleSlopeModel } from "../setup/triple-slope-model";
+import { deployuEVMOS } from "../setup/uEVMOS";
 import { deployVault } from "../setup/vault";
 
 async function deployLocal() {
-  await useCraftform()
-  const [deployer] = await ethers.getSigners();
+  const [deployer, delegator] = await ethers.getSigners();
 
   // Deploy ERC20 tokens
   const tATOM = await deployERC20(deployer, "Local Test ATOM", "tATOM");
@@ -24,11 +23,16 @@ async function deployLocal() {
 
   const interestModel = await deployTripleSlopeModel(deployer);
 
-  const Stayking = await deployStayking(deployer, swapHelper.address)
+  const uEVMOS = await deployuEVMOS(deployer);
+
+  const Stayking = await deployStayking(deployer.address, delegator.address, uEVMOS.address);
+
+  await uEVMOS.updateMinterStatus(uEVMOS.address, true);
   
   const ibtATOM = await deployVault(
     deployer,
     Stayking,
+    swapHelper.address,
     "interest bearing tATOM Vault",
     "ibtATOM",
     tATOM.address,

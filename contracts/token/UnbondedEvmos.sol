@@ -53,12 +53,11 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     mapping(address => uint256) _balances;
     uint256 public override totalSupply;
 
+    /// @notice should set minter (maybe Stayking) after deployed
     function __UnbondedEvmos_init(
-        address minter_,
         uint256 unbondingInterval_
     ) external initializer {
         __Ownable_init();
-        updateMinterStatus(minter_, true);
         updateConfigs(unbondingInterval_);
     }
 

@@ -1,10 +1,12 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { craftform } from "hardhat"
+import { address } from "hardhat-craftform/dist/core";
 import { StaykingCraft } from "../../crafts";
 
 export const deployVault = async (
     deployer: SignerWithAddress,
     Stayking: StaykingCraft,
+    swapHelper: address,
     name: string,
     symbol: string,
     token: string,
@@ -22,6 +24,7 @@ export const deployVault = async (
                         args: [
                             name,
                             symbol,
+                            swapHelper,
                             Stayking.address,
                             token,
                             interestModel,
@@ -33,6 +36,6 @@ export const deployVault = async (
         });
 
     // add vault to Stayking contract
-    await Stayking.setVault(token, vault.address);
+    await Stayking.updateVault(token, vault.address);
     return vault;
 }
