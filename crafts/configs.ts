@@ -17,4 +17,5 @@ export * from './contracts/mock/MockSwapHelper.config';
 export * from './contracts/token/EvmoSwapHelper.config';
 export * from './contracts/token/Stayking.config';
 export * from './contracts/token/TripleSlopeModel.config';
+export * from './contracts/token/UnbondedEvmos.config';
 export * from './contracts/token/Vault.config';

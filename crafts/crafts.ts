@@ -21,4 +21,5 @@ export type MockSwapHelperCraft = CraftType<Typechain.MockSwapHelper, Configs.Mo
 export type EvmoSwapHelperCraft = CraftType<Typechain.EvmoSwapHelper, Configs.EvmoSwapHelperConfig>;
 export type StaykingCraft = CraftType<Typechain.Stayking, Configs.StaykingConfig>;
 export type TripleSlopeModelCraft = CraftType<Typechain.TripleSlopeModel, Configs.TripleSlopeModelConfig>;
+export type UnbondedEvmosCraft = CraftType<Typechain.UnbondedEvmos, Configs.UnbondedEvmosConfig>;
 export type VaultCraft = CraftType<Typechain.Vault, Configs.VaultConfig>;

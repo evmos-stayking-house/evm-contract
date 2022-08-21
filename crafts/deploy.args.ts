@@ -59,6 +59,10 @@ export type StaykingDeployArgs = DeployArgs<StaykingArgs, StaykingProxyProps>;
 // TripleSlopeModel
 export type TripleSlopeModelArgs = [] | undefined;
 export type TripleSlopeModelDeployArgs = DeployArgs<TripleSlopeModelArgs>;
+// UnbondedEvmos
+export type UnbondedEvmosArgs = [] | undefined;
+export type UnbondedEvmosProxyProps = ProxyProps<"__UnbondedEvmos_init", [address, BigNumberish]>;
+export type UnbondedEvmosDeployArgs = DeployArgs<UnbondedEvmosArgs, UnbondedEvmosProxyProps>;
 // Vault
 export type VaultArgs = [] | undefined;
 export type VaultProxyProps = ProxyProps<"__Vault_init", [string, string, address, address, address, address, BigNumberish]>;

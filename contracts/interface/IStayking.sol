@@ -10,15 +10,7 @@ pragma solidity ^0.8.4;
  *************************************************************/
 interface IStayking { 
 
-    // struct Position {
-    //     address user;
-    //     address vault;
-    //     uint256 equity;
-    //     uint256 debt;
-    //     uint256 lastHarvestedAt;
-    // }
-
-    function setVault(address token, address vault) external;
+    function updateVault(address token, address vault) external;
     
     function tokenToVault(address token) external view returns(address vault);
 

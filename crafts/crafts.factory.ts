@@ -22,4 +22,5 @@ export type MockSwapHelperCraftFactory = CraftFactory<Configs.MockSwapHelperConf
 export type EvmoSwapHelperCraftFactory = CraftFactory<Configs.EvmoSwapHelperConfig, Crafts.EvmoSwapHelperCraft, Deploy.EvmoSwapHelperDeployArgs>;
 export type StaykingCraftFactory = CraftFactory<Configs.StaykingConfig, Crafts.StaykingCraft, Deploy.StaykingDeployArgs>;
 export type TripleSlopeModelCraftFactory = CraftFactory<Configs.TripleSlopeModelConfig, Crafts.TripleSlopeModelCraft, Deploy.TripleSlopeModelDeployArgs>;
+export type UnbondedEvmosCraftFactory = CraftFactory<Configs.UnbondedEvmosConfig, Crafts.UnbondedEvmosCraft, Deploy.UnbondedEvmosDeployArgs>;
 export type VaultCraftFactory = CraftFactory<Configs.VaultConfig, Crafts.VaultCraft, Deploy.VaultDeployArgs>;

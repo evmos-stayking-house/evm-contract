@@ -22,6 +22,7 @@ declare module "hardhat/types/runtime" {
         contract(contract: "EvmoSwapHelper"): CraftFactories.EvmoSwapHelperCraftFactory;
         contract(contract: "Stayking"): CraftFactories.StaykingCraftFactory;
         contract(contract: "TripleSlopeModel"): CraftFactories.TripleSlopeModelCraftFactory;
+        contract(contract: "UnbondedEvmos"): CraftFactories.UnbondedEvmosCraftFactory;
         contract(contract: "Vault"): CraftFactories.VaultCraftFactory;
         contract(contract: string): CraftFactory<BaseConfig, BaseCraft<BaseConfig>, DeployArgsBase>;
     }
