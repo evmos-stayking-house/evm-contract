@@ -171,12 +171,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         totalAmount -= amount;
         totalShare -= share;
 
-        /// @dev +15days?
         uEVMOS.mintLockedToken(
             p.user, 
             vault,
-            amount,
-            block.timestamp + 15 days
+            amount
         );
 
         emit Unstake(delegator, p.user, amount, share);

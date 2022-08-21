@@ -15,12 +15,17 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     event UpdateMinterStatus(address account, bool status);
     event UpdateConfigs(uint256 killFactorBps, uint256 liquidateFeeBps);
 
-
     mapping(address => bool) public override isMinter;
 
     string public constant name = "Unstaked EVMOS";
     string public constant symbol = "uEVMOS";
     uint8 public constant decimals = 18;
+
+    uint256 public override lastUnbondedAt;
+    uint256 public override unbondingInterval;   // maybe 14 + 2 days
+
+    /// @notice kor) 논의 필요
+    uint256 public unbondLimit = 7;
 
     /// @notice kor) 필요 없을 수 있다.
     uint256 public killFactorBps;
@@ -201,11 +206,13 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         return _balances[account];
     }
 
+
+    /// @dev mint & lock uEVMOS
+    ///
     function mintLockedToken(
         address to,
         address vault,
-        uint256 amount,
-        uint256 time
+        uint256 amount
     ) public override onlyMinter {
         require(amount > 0, "mintLockedToken: amount <= 0");
 
@@ -213,15 +220,18 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
 
         /// @dev consume all of unlock queue
         _unlock(to, lockedQueue, 1);
+        require(lockedQueue.rear - lockedQueue.front < unbondLimit, "mintLockedToken: unbond limit exceeded." );
 
-        uint256 unlockedAt = block.timestamp + time;
 
         locks.push(
             Locked({
                 account: msg.sender,
                 vault: vault,
                 amount: amount,
-                unlockedAt: unlockedAt,
+                // unlockedAt = min(lastUnbondedAt, block.timestamp) + unbondingInterval
+                unlockedAt: (
+                    lastUnbondedAt > block.timestamp ? lastUnbondedAt : block.timestamp
+                ) + unbondingInterval,
                 received: false
             })
         );
@@ -247,6 +257,7 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
             @TODO
             maybe use delegate/undelegate tx ORACLE?
          */
+        lastUnbondedAt = block.timestamp;
     }
 
     /// @dev calc user's unlockable uEVMOS(includes debt) & debt

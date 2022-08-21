@@ -7,11 +7,14 @@ interface IUnbondedEvmos {
 
     function totalSupply() external view returns (uint256);
 
+    function lastUnbondedAt() external view returns (uint256);
+
+    function unbondingInterval() external view returns (uint256);
+
     function mintLockedToken(
         address to,
         address vault,
-        uint256 amount,
-        uint256 time
+        uint256 amount
     ) external;
 
     function unlock(uint256 minRepaid) external;
