@@ -224,7 +224,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 debtInBase
     ) public payable override {
         address vault = tokenToVault[debtToken];
-        require(positionIdOf[msg.sender][vault] > 0, "addPosition: already have position");
+        require(positionIdOf[msg.sender][vault] == 0, "addPosition: already have position");
         require(equity == msg.value, "addPosition: msg.value != equity");
         
         uint256 amount = equity + debtInBase;
@@ -293,11 +293,13 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address debtToken,
         uint256 extraDebtInBase
     ) public override {
-        address vault = tokenToVault[debtToken];        
-        Position storage p = positions[vault][positionIdOf[msg.sender][vault]];
-
-        require(p.share > 0, "addDebt: no position in for this token.");
         require(extraDebtInBase > 0, "addDebt: extraDebtInBase <= 0");
+
+        address vault = tokenToVault[debtToken];
+        uint256 positionId = positionIdOf[msg.sender][vault];
+        require(positionId > 0, "addDebt: no position");
+
+        Position storage p = positions[vault][positionId];
 
         // borrow token from vault
         IVault(vault).loan(msg.sender, extraDebtInBase);
@@ -326,8 +328,11 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address debtToken,
         uint256 repaidDebt
     ) public override {
-        address vault = tokenToVault[debtToken];        
-        Position storage p = positions[vault][positionIdOf[msg.sender][vault]];
+        address vault = tokenToVault[debtToken];
+        uint256 positionId = positionIdOf[msg.sender][vault];
+        require(positionId > 0, "repayDebt: no position");
+
+        Position storage p = positions[vault][positionId];
         uint256 debtAmount = debtAmountOf(msg.sender, vault); 
 
         SafeToken.safeTransferFrom(
@@ -356,10 +361,12 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address debtToken,
         uint256 minRepaid
     ) public payable override {
-        address vault = tokenToVault[debtToken];        
-        Position storage p = positions[vault][positionIdOf[msg.sender][vault]];
-        uint256 debtAmount = debtAmountOf(msg.sender, vault); 
+        address vault = tokenToVault[debtToken];
+        uint256 positionId = positionIdOf[msg.sender][vault];
+        require(positionId > 0, "repayDebtInBase: no position");  
 
+        Position storage p = positions[vault][positionId];
+        uint256 debtAmount = debtAmountOf(msg.sender, vault);
         uint256 repaidDebt = IVault(vault).repayInBase{value: msg.value}(msg.sender, minRepaid);
         emit PositionChanged(
             msg.sender, 
@@ -378,8 +385,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address debtToken,
         uint256 extraEquity
     ) payable public override {
-        address vault = tokenToVault[debtToken];        
-        Position storage p = positions[vault][positionIdOf[msg.sender][vault]];
+        address vault = tokenToVault[debtToken];
+        uint256 positionId = positionIdOf[msg.sender][vault];
+        require(positionId > 0, "addEquity: no position");
+        Position storage p = positions[vault][positionId];
 
         _stake(p, extraEquity);
         emit PositionChanged(

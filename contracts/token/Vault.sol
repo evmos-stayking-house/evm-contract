@@ -253,6 +253,8 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         address user,
         uint256 debtInBase
     ) public override onlyStayking returns (uint256 debt) {
+        require(user != address(0), "loan: zero address cannot loan.");
+
         ///@dev swap token -> (amountInBase)EVMOS
         debt = _swapToBase(debtInBase);
         debtAmountOf[user] += debt;
@@ -272,7 +274,10 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         address user,
         uint256 amount
     ) private {
-        debtAmountOf[user] -= amount;
+        require(debtAmountOf[user] >= amount, "repay: too much amount to repay.");
+        unchecked {
+            debtAmountOf[user] -= amount;
+        }
         totalDebtAmount -= amount;
         emit Repay(user, amount);
     }
@@ -297,7 +302,10 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         address from,
         uint256 amount
     ) public override onlyStayking {
-        debtAmountOf[from] -= amount;
+        require(debtAmountOf[from] >= amount, "takeDebtOwnership: too much amount to take.");
+        unchecked {
+            debtAmountOf[from] -= amount;
+        }
         debtAmountOf[msg.sender] += amount;
         emit TransferDebtOwnership(from, msg.sender, amount);
     }
