@@ -132,6 +132,8 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 share: 0
             })
         );
+        
+        positionsLengthOf[vault] = 1;
     }
 
     function updateConfigs(
@@ -400,6 +402,29 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         ); 
     }
 
+    /**
+        @dev returns position's value & debt value
+        position value: positionValueInBase
+        equity value: positionValueInBase - debtInBase
+        debt value: debtInBase
+        debt ratio: debtInBase / positionValueInBase * 100(%)
+        kill factor: killFactorBps / 100
+        safety buffer: (kill factor) - (debt ratio)
+     */
+    function positionInfo(
+        address user,
+        address debtToken
+    ) public override view returns (uint256 positionValueInBase, uint256 debtInBase) {
+        address vault = tokenToVault[debtToken];
+        uint256 positionId = positionIdOf[user][vault];
+        Position memory p = positions[vault][positionId];
+
+        positionValueInBase = shareToAmount(p.share);
+
+        uint256 debt = IVault(vault).debtAmountOf(user);
+        debtInBase = IVault(vault).getBaseOut(debt);
+
+    }
 
     function isKillable(
         address debtToken,

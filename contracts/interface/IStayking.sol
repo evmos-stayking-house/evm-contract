@@ -36,7 +36,6 @@ interface IStayking {
         uint256 debtInBase
     ) payable external;
 
-
     /// @param debtToken    debtToken Address (not vault address)
     function removePosition(address debtToken) external;
 
@@ -70,6 +69,11 @@ interface IStayking {
         address debtToken,
         uint256 extraEquity
     ) payable external;
+
+    function positionInfo(
+        address user,
+        address vault
+    ) external view returns (uint256 equityInBase, uint256 debtInBase);
 
     function isKillable(address debtToken, uint256 positionId) external view returns(bool);
     
