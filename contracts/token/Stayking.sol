@@ -455,4 +455,6 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @dev Fallback function to accept EVMOS.
     receive() external payable {}
+
+    fallback() external payable {}
 }

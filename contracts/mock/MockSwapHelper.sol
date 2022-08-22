@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.4;
 
+import "hardhat/console.sol";
 import "../interface/ISwapHelper.sol";
 import "./MockSwap.sol";
 
@@ -49,4 +50,8 @@ contract MockSwapHelper is ISwapHelper {
             SafeToken.safeTransfer(tokenY, msg.sender, dy);
         }
     }
+
+    fallback() external payable {}
+
+    receive() external payable {}
 }

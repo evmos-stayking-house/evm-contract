@@ -9,6 +9,9 @@ node_modules
 configs/localhost
 configs/hardhat
 
+deployments/hardhat
+deployments/localhost
+
 artifacts
 
 cache

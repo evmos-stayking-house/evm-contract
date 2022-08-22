@@ -21,6 +21,7 @@ export const deployMockSwap = async (deployer: SignerWithAddress, Tokens: ERC20O
     // check balance of MockSwap in Tokens[0]
     // if MockSwap has balance => liquidity has already been added.
     const token0balance = await Tokens[0].balanceOf(MockSwap.address);
+
     if(token0balance.toString() === "0"){
         // add liquidity to swap
         const [_, whale] = await ethers.getSigners();

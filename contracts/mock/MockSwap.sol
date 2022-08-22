@@ -74,6 +74,8 @@ contract MockSwap {
         }
     }
 
+    fallback() external payable {}
+
     /// @dev Fallback function to accept EVMOS.
     receive() external payable {}
 }

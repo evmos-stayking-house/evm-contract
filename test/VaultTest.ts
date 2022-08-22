@@ -1,6 +1,4 @@
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { expect } from 'chai'
-import { rmdir } from 'fs'
 import { craftform, ethers } from 'hardhat'
 import { useCraftform } from 'hardhat-craftform'
 import { before } from 'mocha'

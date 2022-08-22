@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
+import "hardhat/console.sol";
 import "../interface/IVault.sol";
 import "../interface/IInterestModel.sol";
 import "../interface/ISwapHelper.sol";
@@ -263,7 +264,8 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
             totalDebtAmount * 1E4 <= totalAmount() * minReservedBps,
             "Loan: Cant' loan debt anymore."
         );
-        SafeToken.safeTransferEVMOS(msg.sender, debt);
+
+        SafeToken.safeTransferEVMOS(msg.sender, debtInBase);
         emit Loan(user, debt);
     }
 
@@ -361,4 +363,6 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
     /// @dev Fallback function to accept EVMOS.
     receive() external payable {}
+
+    fallback() external payable {}
 }
