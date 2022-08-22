@@ -40,6 +40,7 @@ contract MockSwapHelper is ISwapHelper {
             SafeToken.safeTransferFrom(tokenX, msg.sender, address(this), dx);
         }
 
+        SafeToken.safeApprove(tokenX, address(swap), dx);
         dy = swap.exchange(tokenX, tokenY, dx, minDy);
 
         if(tokenY == address(0)){
