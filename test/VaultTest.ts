@@ -1,11 +1,10 @@
 import { expect } from 'chai'
 import { craftform, ethers } from 'hardhat'
-import { useCraftform } from 'hardhat-craftform'
 import { before } from 'mocha'
 import deployLocal from '../scripts/deploy/localhost'
 import { toBN } from '../scripts/utils'
 
-useCraftform();
+
 describe('Vault 컨트랙트 테스트', async () => {
     before(async () => {
         await deployLocal()

@@ -1,4 +1,3 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { craftform } from "hardhat"
 import { address } from "hardhat-craftform/dist/core"
 

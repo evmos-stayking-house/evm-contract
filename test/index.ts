@@ -1,7 +1,7 @@
 import { craftform, ethers } from "hardhat";
 import deployLocal from "../scripts/deploy/localhost"
-import "../crafts"
 import { toBN } from "../scripts/utils";
+import "../crafts"
 
 describe("EVMOS Hackathon", async function (){
     before("base setup", async function (){
