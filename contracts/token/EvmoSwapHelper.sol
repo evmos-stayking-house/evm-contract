@@ -51,6 +51,7 @@ contract EvmoSwapHelper is ISwapHelper {
 
         // if tokenY == address(0) too, swapExactETHForTokens will be reverted.
         if(tokenX == address(0)){
+            require(dx == msg.value, "exchange: invalid msg.value");
             path[0] = router.WETH();
             path[1] = tokenY;
 
@@ -60,8 +61,6 @@ contract EvmoSwapHelper is ISwapHelper {
                 msg.sender,
                 block.timestamp + 600 // 10 minutes
             );
-
-            SafeToken.safeTransfer(tokenY, msg.sender, amounts[1]);
 
             return amounts[1];
         }
@@ -88,8 +87,6 @@ contract EvmoSwapHelper is ISwapHelper {
                     msg.sender,
                     block.timestamp + 600 // 10 minutes
                 );
-
-                SafeToken.safeTransferEVMOS(msg.sender, amounts[1]);
             }
             else {
                 path[1] = tokenY;
@@ -100,7 +97,6 @@ contract EvmoSwapHelper is ISwapHelper {
                     msg.sender,
                     block.timestamp + 600 // 10 minutes
                 );
-                SafeToken.safeTransfer(tokenY, msg.sender, amounts[1]);
             }
 
             return amounts[1];

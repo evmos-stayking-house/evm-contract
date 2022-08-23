@@ -18,6 +18,11 @@ const config: HardhatUserConfig = {
         initializer: "__$_init"
     },
     networks: {
+        hardhat: {
+            forking: {
+                url: "https://eth.bd.evmos.dev:8545",
+            },
+        },
         localhost: {
             chainId: 9000,
             url: "http://127.0.0.1:8545/",
