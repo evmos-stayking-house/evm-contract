@@ -1,2 +1,5 @@
+import deployTestnet from "./deploy/testnet";
 
-console.log("NOT IMPLEMENTED...")
+deployTestnet().catch((e) => {
+    console.log(e);
+})

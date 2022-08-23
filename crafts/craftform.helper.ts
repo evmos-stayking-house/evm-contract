@@ -17,6 +17,12 @@ declare module "hardhat/types/runtime" {
         contract(contract: "OwnableUpgradeable"): CraftFactories.OwnableUpgradeableCraftFactory;
         contract(contract: "ReentrancyGuardUpgradeable"): CraftFactories.ReentrancyGuardUpgradeableCraftFactory;
         contract(contract: "IERC20"): CraftFactories.IERC20CraftFactory;
+        contract(contract: "EvmoSwapRouter"): CraftFactories.EvmoSwapRouterCraftFactory;
+        contract(contract: "IEvmoSwapFactory"): CraftFactories.IEvmoSwapFactoryCraftFactory;
+        contract(contract: "IEvmoSwapPair"): CraftFactories.IEvmoSwapPairCraftFactory;
+        contract(contract: "IEvmoSwapRouter01"): CraftFactories.IEvmoSwapRouter01CraftFactory;
+        contract(contract: "IEvmoSwapRouter02"): CraftFactories.IEvmoSwapRouter02CraftFactory;
+        contract(contract: "IWETH"): CraftFactories.IWETHCraftFactory;
         contract(contract: "MockSwap"): CraftFactories.MockSwapCraftFactory;
         contract(contract: "MockSwapHelper"): CraftFactories.MockSwapHelperCraftFactory;
         contract(contract: "EvmoSwapHelper"): CraftFactories.EvmoSwapHelperCraftFactory;
