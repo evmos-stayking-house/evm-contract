@@ -1,12 +1,10 @@
 import { craftform, ethers } from "hardhat";
-import { deployERC20 } from "../setup/erc20";
-import { deployMockSwap } from "../setup/mockswap";
 import { deployStayking } from "../setup/Stayking";
 import { deployTripleSlopeModel } from "../setup/triple-slope-model";
 import { deployuEVMOS } from "../setup/uEVMOS";
 import { deployVault } from "../setup/vault";
-import "../../crafts";
 import { toBN } from "../utils";
+import "../../crafts";
 
 const ROUTER_ADDRESS = "0xb6b801Aa59970A9247F662F322a5B231503BF126"
 const TOKEN_ADDRESS = {
@@ -22,10 +20,6 @@ async function deployTestnet() {
     const [deployer, delegator] = await ethers.getSigners();
     console.log("deployer value: ", (await deployer.getBalance()).div(toBN(1, 18)).toString())
 
-    const EVMOSwap = await craftform.contract("EvmoSwapRouter").upsertConfig({
-        address: ROUTER_ADDRESS
-    });
-
     const EvmoSwapHelper = await craftform.contract("EvmoSwapHelper").deploy(
         null,
         {
@@ -34,57 +28,35 @@ async function deployTestnet() {
         }
     )
 
-    const val = await EVMOSwap.getAmountsOut(
-        toBN(1, 18), 
-        [
-            TOKEN_ADDRESS.mockWEVMOS,
-            TOKEN_ADDRESS.mockUSDT,
-        ]
-    )
+    // ERC20 tokens
+    const mockUSDT = await craftform.contract("ERC20").upsertConfig({
+        alias: "mockUSDT",
+        address: TOKEN_ADDRESS.mockUSDT
+    });
 
-    const helperVal = await EvmoSwapHelper.getDy(
-        TOKEN_ADDRESS.EVMOS,
-        TOKEN_ADDRESS.mockUSDT,
-        toBN(1, 18), 
-    )
+    // const mockUSDC = await craftform.contract("ERC20").upsertConfig({
+    //     alias: "mockUSDC",
+    //     address: TOKEN_ADDRESS.mockUSDC
+    // });
 
-    console.log(val[0].toString(), val[1].toString());
+    const interestModel = await deployTripleSlopeModel(deployer);
 
+    const uEVMOS = await deployuEVMOS(deployer);
 
+    const Stayking = await deployStayking(deployer.address, delegator.address, uEVMOS.address);
 
-    // // Deploy ERC20 tokens
-    // const tATOM = await craftform.contract("ERC20").upsertConfig({
-    //     alias: "tATOM",
-    //     address: ""
-    // })
-    // const tUSDC = await deployERC20(deployer, "Local Test USDC", "tUSDC");
-    // const tUSDT = await deployERC20(deployer, "Local Test USDT", "tUSDT");
-
-    // // Deploy MockSwap & MockSwapHelper
-    // const swapHelper = await deployMockSwap(deployer, [
-    //     tATOM,
-    //     tUSDC,
-    //     tUSDT,
-    // ]);
-
-    // const interestModel = await deployTripleSlopeModel(deployer);
-
-    // const uEVMOS = await deployuEVMOS(deployer);
-
-    // const Stayking = await deployStayking(deployer.address, delegator.address, uEVMOS.address);
-
-    // await uEVMOS.updateMinterStatus(uEVMOS.address, true);
+    await uEVMOS.updateMinterStatus(uEVMOS.address, true);
     
-    // const ibtATOM = await deployVault(
-    //     deployer,
-    //     Stayking,
-    //     swapHelper.address,
-    //     "interest bearing tATOM Vault",
-    //     "ibtATOM",
-    //     tATOM.address,
-    //     interestModel.address,
-    //     1000  // 10%
-    // );
+    const ibmockUSDT = await deployVault(
+        deployer,
+        Stayking,
+        EvmoSwapHelper.address,
+        "interest bearing mockUSDT Vault",
+        "ibmockUSDT",
+        mockUSDT.address,
+        interestModel.address,
+        1000  // 10%
+    );
 
 }
 
