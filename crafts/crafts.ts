@@ -2,6 +2,7 @@ import { CraftType } from 'hardhat-craftform/dist/core';
 import * as Typechain from '../typechain-types';
 import * as Configs from './configs';
 
+export type IEvmoSwapRouterCraft = CraftType<Typechain.IEvmoSwapRouter, Configs.IEvmoSwapRouterConfig>;
 export type IInterestModelCraft = CraftType<Typechain.IInterestModel, Configs.IInterestModelConfig>;
 export type IStaykingCraft = CraftType<Typechain.IStayking, Configs.IStaykingConfig>;
 export type ISwapHelperCraft = CraftType<Typechain.ISwapHelper, Configs.ISwapHelperConfig>;

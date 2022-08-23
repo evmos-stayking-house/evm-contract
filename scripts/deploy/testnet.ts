@@ -8,6 +8,7 @@ import { deployVault } from "../setup/vault";
 import "../../crafts";
 import { toBN } from "../utils";
 
+const ROUTER_ADDRESS = "0xb6b801Aa59970A9247F662F322a5B231503BF126"
 const TOKEN_ADDRESS = {
     // tATOM: "",
     mockUSDC: "0xae95d4890bf4471501E0066b6c6244E1CAaEe791",
@@ -19,8 +20,7 @@ const TOKEN_ADDRESS = {
 async function deployTestnet() {
 
     const EVMOSwap = await craftform.contract("EvmoSwapRouter").upsertConfig({
-        address: "0xb6b801Aa59970A9247F662F322a5B231503BF126",
-        alias: "EvmoSwapRouter"
+        address: ROUTER_ADDRESS
     });
 
     const val = await EVMOSwap.getAmountsOut(

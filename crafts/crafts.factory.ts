@@ -3,6 +3,7 @@ import * as Configs from './configs';
 import * as Crafts from './crafts';
 import * as Deploy from './deploy.args';
 
+export type IEvmoSwapRouterCraftFactory = CraftFactory<Configs.IEvmoSwapRouterConfig, Crafts.IEvmoSwapRouterCraft, Deploy.IEvmoSwapRouterDeployArgs>;
 export type IInterestModelCraftFactory = CraftFactory<Configs.IInterestModelConfig, Crafts.IInterestModelCraft, Deploy.IInterestModelDeployArgs>;
 export type IStaykingCraftFactory = CraftFactory<Configs.IStaykingConfig, Crafts.IStaykingCraft, Deploy.IStaykingDeployArgs>;
 export type ISwapHelperCraftFactory = CraftFactory<Configs.ISwapHelperConfig, Crafts.ISwapHelperCraft, Deploy.ISwapHelperDeployArgs>;

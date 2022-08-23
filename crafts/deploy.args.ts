@@ -1,6 +1,9 @@
 import { DeployArgs, ProxyProps, address } from 'hardhat-craftform/dist/core';
 import { BigNumberish } from 'ethers';
 // argsType for constructor or initializer
+// IEvmoSwapRouter
+export type IEvmoSwapRouterArgs = [] | undefined;
+export type IEvmoSwapRouterDeployArgs = DeployArgs<IEvmoSwapRouterArgs>;
 // IInterestModel
 export type IInterestModelArgs = [] | undefined;
 export type IInterestModelDeployArgs = DeployArgs<IInterestModelArgs>;

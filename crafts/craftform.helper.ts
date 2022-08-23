@@ -3,6 +3,7 @@ import { BaseCraft, BaseConfig, CraftFactory, DeployArgsBase } from 'hardhat-cra
 
 declare module "hardhat/types/runtime" {
     interface ICraftformHelper {
+        contract(contract: "IEvmoSwapRouter"): CraftFactories.IEvmoSwapRouterCraftFactory;
         contract(contract: "IInterestModel"): CraftFactories.IInterestModelCraftFactory;
         contract(contract: "IStayking"): CraftFactories.IStaykingCraftFactory;
         contract(contract: "ISwapHelper"): CraftFactories.ISwapHelperCraftFactory;

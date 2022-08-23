@@ -1,3 +1,4 @@
+export * from './contracts/interface/IEvmoSwapRouter.config';
 export * from './contracts/interface/IInterestModel.config';
 export * from './contracts/interface/IStayking.config';
 export * from './contracts/interface/ISwapHelper.config';
