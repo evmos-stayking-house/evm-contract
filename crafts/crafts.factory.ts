@@ -3,6 +3,7 @@ import * as Configs from './configs';
 import * as Crafts from './crafts';
 import * as Deploy from './deploy.args';
 
+export type IEvmoSwapRouterCraftFactory = CraftFactory<Configs.IEvmoSwapRouterConfig, Crafts.IEvmoSwapRouterCraft, Deploy.IEvmoSwapRouterDeployArgs>;
 export type IInterestModelCraftFactory = CraftFactory<Configs.IInterestModelConfig, Crafts.IInterestModelCraft, Deploy.IInterestModelDeployArgs>;
 export type IStaykingCraftFactory = CraftFactory<Configs.IStaykingConfig, Crafts.IStaykingCraft, Deploy.IStaykingDeployArgs>;
 export type ISwapHelperCraftFactory = CraftFactory<Configs.ISwapHelperConfig, Crafts.ISwapHelperCraft, Deploy.ISwapHelperDeployArgs>;
@@ -17,6 +18,12 @@ export type OwnableCraftFactory = CraftFactory<Configs.OwnableConfig, Crafts.Own
 export type OwnableUpgradeableCraftFactory = CraftFactory<Configs.OwnableUpgradeableConfig, Crafts.OwnableUpgradeableCraft, Deploy.OwnableUpgradeableDeployArgs>;
 export type ReentrancyGuardUpgradeableCraftFactory = CraftFactory<Configs.ReentrancyGuardUpgradeableConfig, Crafts.ReentrancyGuardUpgradeableCraft, Deploy.ReentrancyGuardUpgradeableDeployArgs>;
 export type IERC20CraftFactory = CraftFactory<Configs.IERC20Config, Crafts.IERC20Craft, Deploy.IERC20DeployArgs>;
+export type EvmoSwapRouterCraftFactory = CraftFactory<Configs.EvmoSwapRouterConfig, Crafts.EvmoSwapRouterCraft, Deploy.EvmoSwapRouterDeployArgs>;
+export type IEvmoSwapFactoryCraftFactory = CraftFactory<Configs.IEvmoSwapFactoryConfig, Crafts.IEvmoSwapFactoryCraft, Deploy.IEvmoSwapFactoryDeployArgs>;
+export type IEvmoSwapPairCraftFactory = CraftFactory<Configs.IEvmoSwapPairConfig, Crafts.IEvmoSwapPairCraft, Deploy.IEvmoSwapPairDeployArgs>;
+export type IEvmoSwapRouter01CraftFactory = CraftFactory<Configs.IEvmoSwapRouter01Config, Crafts.IEvmoSwapRouter01Craft, Deploy.IEvmoSwapRouter01DeployArgs>;
+export type IEvmoSwapRouter02CraftFactory = CraftFactory<Configs.IEvmoSwapRouter02Config, Crafts.IEvmoSwapRouter02Craft, Deploy.IEvmoSwapRouter02DeployArgs>;
+export type IWETHCraftFactory = CraftFactory<Configs.IWETHConfig, Crafts.IWETHCraft, Deploy.IWETHDeployArgs>;
 export type MockSwapCraftFactory = CraftFactory<Configs.MockSwapConfig, Crafts.MockSwapCraft, Deploy.MockSwapDeployArgs>;
 export type MockSwapHelperCraftFactory = CraftFactory<Configs.MockSwapHelperConfig, Crafts.MockSwapHelperCraft, Deploy.MockSwapHelperDeployArgs>;
 export type EvmoSwapHelperCraftFactory = CraftFactory<Configs.EvmoSwapHelperConfig, Crafts.EvmoSwapHelperCraft, Deploy.EvmoSwapHelperDeployArgs>;
