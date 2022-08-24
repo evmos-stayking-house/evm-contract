@@ -1,7 +1,8 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { craftform } from "hardhat";
 
-export const deployTripleSlopeModel = (deployer: SignerWithAddress) => {
+export const deployTripleSlopeModel = async (deployer: SignerWithAddress) => {
     return craftform.contract("TripleSlopeModel")
-        .deploy(null, { from: deployer.address });
+        .deploy(null, { from: deployer.address })
+        
 }
