@@ -4,7 +4,6 @@ import { before } from 'mocha'
 import deployLocal from '../scripts/deploy/localhost'
 import { toBN } from '../scripts/utils'
 
-
 describe('Vault 컨트랙트 테스트', async () => {
     before(async () => {
         await deployLocal()
