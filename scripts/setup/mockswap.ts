@@ -27,7 +27,7 @@ export const deployMockSwap = async (deployer: SignerWithAddress, Tokens: ERC20O
 
     if(token0balance.lte(toBN(1, 18))){ // less than 1 ETH
         // add liquidity to swap
-        const [_, whale] = await ethers.getSigners();
+        const [whale] = await ethers.getSigners();
         console.log(`Add liquidity to MockSwap: ${EVMOS_SUPPLY}EVMOS`);
         await whale.sendTransaction({
             from: whale.address,

@@ -24,8 +24,6 @@ const config: HardhatUserConfig = {
             },
         },
         localhost: {
-            chainId: 9000,
-            url: "http://127.0.0.1:8545/",
             accounts: [
                 process.env.DEPLOYER_PRIVATE_KEY!,
                 process.env.DELEGATOR_PRIVATE_KEY!

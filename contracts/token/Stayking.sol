@@ -402,6 +402,51 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         );
     }
 
+    /** @dev change position value
+        case 1. changeEquityInBase > 0 
+            - increase position value (call _stake function)
+            - decrease debt ratio
+        case 2. changeEquityInBase < 0 
+            - decrease position value (call _unstake function)
+            - increase debt ratio
+        case 3. changeDebtInBase > 0 (borrow more debt)
+            - increase position value (call _stake function)
+            - increase debt ratio
+        case 4. changeEquityInBase < 0 (repay debt by unstaking)
+            - decrease position value (call _unstake function)
+            - decrease debt ratio
+        case 5. repayDebt > 0 (repay debt with user's own token) 
+                or msg.value > 0 (repay debt with user's own EVMOS)
+            - position value not changes (not call _stake/_unstake function)
+            - decrease debt ratio
+     */
+    function changePosition(
+        address debtToken,
+        int256 changeEquityInBase,
+        int256 changeDebtInBase,
+        uint256 repayDebt
+    ) public payable {
+        address vault = tokenToVault[debtToken];
+        uint256 positionId = positionIdOf[msg.sender][vault];
+        require(positionId > 0, "changePosition: no position");
+
+        int256 amountChanged = changeEquityInBase + changeDebtInBase;
+
+        if(changeEquityInBase > 0){
+
+        }
+        else if(changeEquityInBase < 0){}
+
+        if(changeDebtInBase > 0){}
+        else if(changeDebtInBase < 0){}
+
+        if(repayDebt > 0){
+
+        }
+
+
+    }
+
     /**
         @dev returns position's value & debt value
         position value: positionValueInBase
