@@ -45,7 +45,7 @@ async function deployTestnet() {
 
     const Stayking = await deployStayking(deployer.address, delegator.address, uEVMOS.address);
 
-    await uEVMOS.updateMinterStatus(uEVMOS.address, true);
+    await uEVMOS.updateMinterStatus(Stayking.address, true);
     
     const ibmockUSDT = await deployVault(
         deployer,
