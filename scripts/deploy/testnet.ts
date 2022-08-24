@@ -17,7 +17,7 @@ const TOKEN_ADDRESS = {
 }
 
 async function deployTestnet() {
-    const [deployer, delegator] = await ethers.getSigners();
+    const [deployer] = await ethers.getSigners();
     console.log("deployer value: ", (await deployer.getBalance()).div(toBN(1, 18)).toString())
 
     const EvmoSwapHelper = await craftform.contract("EvmoSwapHelper").deploy(
@@ -43,7 +43,7 @@ async function deployTestnet() {
 
     const uEVMOS = await deployuEVMOS(deployer);
 
-    const Stayking = await deployStayking(deployer.address, delegator.address, uEVMOS.address);
+    const Stayking = await deployStayking(deployer.address, deployer.address, uEVMOS.address);
 
     await uEVMOS.updateMinterStatus(Stayking.address, true);
     
