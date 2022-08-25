@@ -15,6 +15,8 @@ interface IVault {
 
     function debtAmountOf(address user) external view returns(uint256);
 
+    function debtAmountInBase(address user) external view returns(uint256);
+
     function totalDebtAmount() external view returns(uint256);
 
     function utilizationRateBps() external view returns(uint256);
@@ -40,6 +42,10 @@ interface IVault {
 
     function getTokenOut(uint256 baseIn) external view returns(uint256 tokenOut);
 
+    function pendingDebtAmountToShare(uint256 amount) external view returns(uint256);
+
+    function pendingDebtShareToAmount(uint256 share) external view returns(uint256);
+
 
     /******************************
      * Only for Stayking Contract *
@@ -48,7 +54,10 @@ interface IVault {
 
     function repayInToken(address user, uint256 debt) external;
 
-    function repayInBase(address user, uint256 minRepaid) payable external returns(uint256 repaid);
+    function repayInBase(
+        address user, 
+        uint256 minRepaid
+    ) payable external returns(uint256 repaid);
 
     function takeDebtOwnership(
         address from,
@@ -57,7 +66,10 @@ interface IVault {
 
     function payInterest(uint256 minPaidInterest) external payable;
 
-    function pendRepay(address user) external;
+    function pendRepay(
+        address user,
+        uint256 amount
+    ) external returns(uint256 pendingDebtShare);
 
     function repayPendingDebt(address user, uint256 minRepaidDebt) payable external returns(uint256);
 

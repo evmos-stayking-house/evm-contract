@@ -24,7 +24,7 @@ async function deployLocal() {
     tATOM,
     tUSDC,
     tUSDT,
-  ]);
+  ], 5000);
 
   const interestModel = await deployTripleSlopeModel(deployer);
 

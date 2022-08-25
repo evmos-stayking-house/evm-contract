@@ -3,7 +3,7 @@ import { craftform, ethers } from 'hardhat'
 import { before } from 'mocha'
 import { toBN } from '../scripts/utils'
 import "../crafts"
-import deployTestnet from '../scripts/deploy/testnet'
+import deployTestnet from '../scripts/deploy/testnet-mockswap'
 
 const ROUTER_ADDRESS = "0xb6b801Aa59970A9247F662F322a5B231503BF126"
 const TOKEN_ADDRESS = {

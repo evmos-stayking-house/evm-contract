@@ -1,5 +1,5 @@
-import deployTestnet from "./deploy/testnet";
+import deployTestnetWithMockswap from "./deploy/testnet-mockswap";
 
-deployTestnet().catch((e) => {
+deployTestnetWithMockswap().catch((e) => {
     console.log(e);
 })

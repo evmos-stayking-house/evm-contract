@@ -129,16 +129,22 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
             (totalAmount() * share) / totalShare;
     }
 
+    function debtAmountInBase(
+        address user
+    ) public override view returns(uint256){
+        return getBaseIn(debtAmountOf[user]);
+    }
+
     function pendingDebtAmountToShare(
         uint256 amount
-    ) public view returns(uint256) {
+    ) public override view returns(uint256) {
         return (totalPendingDebtAmount == 0) ? amount : 
             (totalPendingDebtShare * amount) / totalPendingDebtAmount;
     }
 
     function pendingDebtShareToAmount(
         uint256 share
-    ) public view returns(uint256) {
+    ) public override view returns(uint256) {
         return (totalPendingDebtShare == 0) ? share : 
             (totalPendingDebtAmount * share) / totalPendingDebtShare;
     }
@@ -292,6 +298,9 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         _repay(user, amount);
     }
 
+    /// @dev repay debt for Base token(EVMOS).
+    /// @param user debt owner
+    /// @param minRepaid  minimum repaid debtToken amonut
     function repayInBase(
         address user,
         uint256 minRepaid
@@ -324,13 +333,15 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     /// @dev pending repay debt because of EVMOS Unstaking's 14 days lock.
     /// Stayking should approve token first.
     function pendRepay(
-        address user
-    ) public override onlyStayking {
-        uint256 pendingDebtAmount = debtAmountOf[user];
-        uint256 pendingDebtShare = pendingDebtAmountToShare(pendingDebtAmount);
+        address user,
+        uint256 amountInBase
+    ) public override onlyStayking returns(uint256 pendingDebtShare) {
+        uint256 amount = getTokenOut(amountInBase);
+        require(amount <= debtAmountOf[user], "pendRepay: too much amount to repay.");
+        pendingDebtShare = pendingDebtAmountToShare(amount);
         pendingDebtShareOf[user] += pendingDebtShare;
         totalPendingDebtShare += pendingDebtShare;
-        totalPendingDebtAmount += pendingDebtAmount;
+        totalPendingDebtAmount += amount;
     }
 
     function getPendingDebt(
@@ -345,7 +356,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         return getBaseIn(getPendingDebt(user));
     }
 
-    /// @dev stayking should send with value: repayingDebt 
+    /// @dev stayking should send with msg.value(= repayingDebt)
     function repayPendingDebt(
         address user,
         uint256 minRepaidDebt

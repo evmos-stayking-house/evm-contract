@@ -14,7 +14,8 @@ interface IUnbondedEvmos {
     function mintLockedToken(
         address to,
         address vault,
-        uint256 amount
+        uint256 amount,
+        uint256 debtShare
     ) external;
 
     function unlock(uint256 minRepaid) external;

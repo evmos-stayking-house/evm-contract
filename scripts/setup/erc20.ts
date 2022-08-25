@@ -15,7 +15,7 @@ export const deployERC20 = async (deployer: SignerWithAddress, name: string, sym
     // self mint token
     const deployerBalance = await Token.balanceOf(deployer.address)
     if(deployerBalance.toString() === "0") {
-        await Token.mint(deployer.address, toBN(1, 28));    // 1E50
+        await Token.mint(deployer.address, toBN(1, 24));    // 1E50
         // await Token.mint(deployer.address, toBN(1, 50));
     }
     return Token
