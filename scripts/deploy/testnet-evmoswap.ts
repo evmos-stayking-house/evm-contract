@@ -16,7 +16,7 @@ const TOKEN_ADDRESS = {
     EVMOS: ethers.constants.AddressZero,
 }
 
-async function deployTestnet() {
+async function deployTestnetWithEvmoswap() {
     const [deployer] = await ethers.getSigners();
     console.log("deployer value: ", (await deployer.getBalance()).div(toBN(1, 18)).toString())
 
@@ -60,4 +60,4 @@ async function deployTestnet() {
 
 }
 
-export default deployTestnet;
+export default deployTestnetWithEvmoswap;

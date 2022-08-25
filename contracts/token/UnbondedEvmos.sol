@@ -25,13 +25,14 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     uint256 public override unbondingInterval;   // maybe 14 + 2 days
 
     /// @notice kor) 논의 필요
-    uint256 public unbondLimit = 7;
+    // uint256 public unbondLimit = 7;
 
     struct Locked {
         bool received;
         address account;
         address vault;
         uint256 amount;
+        uint256 debtShare;
         uint256 unlockedAt;
     }
 
@@ -111,23 +112,23 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         totalSupply -= amount;
     }
 
+    /// @return restUnlocked EVMOS amount that user can receive
     function _repayPendingDebt(
-        address account,
-        address vault,
-        uint256 unlockable,
+        Locked storage lock,
         uint256 minRepaid
-    ) private returns (uint256 restUnlocked) {
-        uint256 pendingDebtInBase = IVault(vault).getPendingDebtInBase(account);
-        if(unlockable >= pendingDebtInBase){
+    ) private returns (uint256) {
+        IVault vault = IVault(lock.vault);
+        address account = lock.account;
+        uint256 amount = lock.amount;
+
+        uint256 pendingDebtInBase = vault.pendingDebtShareToAmount(lock.debtShare);
+        lock.received = true;
+        if(amount >= pendingDebtInBase){
             IVault(vault).repayInBase{value: pendingDebtInBase}(account, minRepaid);
-            return unlockable - pendingDebtInBase;
+            return amount - pendingDebtInBase;
         }
         else {
-            /// @dev kor) 빚을 다 갚을 수 있는지 없는지?
-            // case 1. 빚 못 갚으면 revert
-            // revert();
-            // case 2. 빚 못 갚아도 일단 갚을 수 있는 것만 repay
-            IVault(vault).repayInBase{value: unlockable}(account, minRepaid);
+            vault.repayInBase{value: amount}(account, minRepaid);
             return 0;
         }
     }
@@ -152,20 +153,16 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         // assert under 7 loop.
         for (i; i < rear; i++) {
             uint256 lockedId = lockedQueue.lockedIds[i];
-            Locked memory lock = locks[lockedId];
+            Locked storage lock = locks[lockedId];
             
             if(lock.unlockedAt <= block.timestamp){  /// @dev unlockable
                 unlockable += lock.amount;
 
                 /// @dev kor) (개선 필요) aggregate하여 repay 횟수 줄이기
                 returnable += _repayPendingDebt(
-                    account,
-                    lock.vault,
-                    lock.amount,
+                    lock,
                     minRepaid
                 );
-
-                locks[lockedId].received = true;
             }
             else 
                 break;
@@ -201,7 +198,8 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     function mintLockedToken(
         address to,
         address vault,
-        uint256 amount
+        uint256 amount,
+        uint256 debtShare
     ) public override onlyMinter {
         require(amount > 0, "mintLockedToken: amount <= 0");
 
@@ -209,15 +207,17 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
 
         /// @dev consume all of unlock queue
         _unlock(to, lockedQueue, 1);
-        require(lockedQueue.rear - lockedQueue.front < unbondLimit, "mintLockedToken: unbond limit exceeded." );
 
+        /// @dev limit queue size?
+        // require(lockedQueue.rear - lockedQueue.front < unbondLimit, "mintLockedToken: unbond limit exceeded." );
 
         locks.push(
             Locked({
                 account: msg.sender,
                 vault: vault,
                 amount: amount,
-                // unlockedAt = min(lastUnbondedAt, block.timestamp) + unbondingInterval
+                debtShare: debtShare,
+                // TODO 개선 필요
                 unlockedAt: (
                     lastUnbondedAt > block.timestamp ? lastUnbondedAt : block.timestamp
                 ) + unbondingInterval,
@@ -260,7 +260,8 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         if(front == rear)   // no unlockable amounts
             return (0, 0);
         
-        // assert under 7 loop.
+        // TODO assert under 7 loop?
+        // kor) 가스비 너무 많이 들게 되면 트랜잭션 실패할듯..
         for (uint128 i = front; i < rear; i++) {
             Locked memory lock = locks[lockedIds[i]];
             if(lock.unlockedAt <= block.timestamp){

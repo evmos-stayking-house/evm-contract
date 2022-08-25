@@ -163,26 +163,43 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
 
+    /**
+     @param p           Position
+     @param vault       owed by the user
+     @param amount      unstaked amount
+     @param repaidDebtInBase  repaid amount in EVMOS ( repaidDebt <= amount = shareToAmount(amount) )
+     */
     function _unstake(
         Position storage p,
         address vault,
-        uint256 share
-    ) private returns(uint256 amount) {
-        amount = shareToAmount(share);
+        uint256 amount,
+        uint256 repaidDebtInBase
+    ) private {
+        require(repaidDebtInBase <= amount, "unstake: repaidDebtInBase > unstaked amount");
+        uint256 share = amountToShare(amount);
         p.share -= share;
         totalAmount -= amount;
         totalShare -= share;
 
-        IVault(vault).pendRepay(p.user);
+        uint256 pendingDebtShare = IVault(vault).pendRepay(p.user, repaidDebtInBase);
 
         uEVMOS.mintLockedToken(
             p.user,
             vault,
-            amount
+            amount,
+            pendingDebtShare
         );
 
-
         emit Unstake(delegator, p.user, amount, share);
+    }
+
+    function _unstakeAll(
+        Position storage p,
+        address vault
+    ) private returns(uint256 amount){
+        uint256 debtInBase = IVault(vault).debtAmountInBase(p.user);
+        amount = shareToAmount(p.share);
+        _unstake(p, vault, shareToAmount(p.share), debtInBase);
     }
 
     function _isHealthy(
@@ -270,7 +287,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         /// @dev amount in EVMOS that user have to repay
         uint256 currentDebtInBase = IVault(vault).getBaseIn(debtAmount);
 
-        uint256 unstakedAmount = _unstake(p, vault, p.share);
+        uint256 unstakedAmount = _unstakeAll(p, vault);
         require(
             unstakedAmount >= currentDebtInBase,
             "removePosition: Bad debt"
@@ -402,49 +419,96 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         );
     }
 
-    /** @dev change position value
+    /** @notice change position value
         case 1. changeEquityInBase > 0 
             - increase position value (call _stake function)
             - decrease debt ratio
         case 2. changeEquityInBase < 0 
             - decrease position value (call _unstake function)
             - increase debt ratio
-        case 3. changeDebtInBase > 0 (borrow more debt)
+        case 3. changeDebt > 0 (borrow more debt)
             - increase position value (call _stake function)
             - increase debt ratio
-        case 4. changeEquityInBase < 0 (repay debt by unstaking)
+        case 4. changeEquity < 0 (repay debt by unstaking)
             - decrease position value (call _unstake function)
             - decrease debt ratio
         case 5. repayDebt > 0 (repay debt with user's own token) 
                 or msg.value > 0 (repay debt with user's own EVMOS)
+                @dev (msg.value - changeEquityInBase) equals to repayDebtInBase
             - position value not changes (not call _stake/_unstake function)
             - decrease debt ratio
+        @dev User should approve this first
+        @dev if msg.value > 0, changeEquityInBase >= 0
+             since msg.value = changeEquityInBase + repayDebtInBase
      */
+
+     
     function changePosition(
         address debtToken,
-        int256 changeEquityInBase,
-        int256 changeDebtInBase,
-        uint256 repayDebt
+        int256  equityInBaseChanged,
+        int256  debtInBaseChanged,
+        uint256 repaidDebt
     ) public payable {
         address vault = tokenToVault[debtToken];
         uint256 positionId = positionIdOf[msg.sender][vault];
         require(positionId > 0, "changePosition: no position");
 
-        int256 amountChanged = changeEquityInBase + changeDebtInBase;
-
-        if(changeEquityInBase > 0){
-
+        uint256 repaidDebtInBase;
+        uint256 stakedAmount; // can added if equityInBaseChanged > 0 or  debtInBaseChanged > 0 (add equity or borrow more debt)
+        uint256 unstakedAmount;
+        if(equityInBaseChanged > 0){    // stake more with own equity
+            require(
+                msg.value >= uint256(equityInBaseChanged), 
+                "changePosition: Not enough msg.value"
+            );
+            unchecked {
+                repaidDebtInBase = msg.value - uint256(equityInBaseChanged);
+                stakedAmount = uint256(equityInBaseChanged);
+            }
+        } 
+        else if(equityInBaseChanged < 0) { // partial close position made up of equity
+            unstakedAmount = uint256(-equityInBaseChanged);
+            // repaidDebtInBase = 0
         }
-        else if(changeEquityInBase < 0){}
 
-        if(changeDebtInBase > 0){}
-        else if(changeDebtInBase < 0){}
-
-        if(repayDebt > 0){
-
+        if(debtInBaseChanged > 0){ // borrow more debt (stake more)
+            IVault(vault).loan(msg.sender, uint256(debtInBaseChanged));
+            stakedAmount += uint256(debtInBaseChanged);
+        }
+        else if(debtInBaseChanged < 0){ // partial close position made up of debt
+            unstakedAmount += uint256(-debtInBaseChanged);
         }
 
+        /******************************************
+           Repay Debt (position value not change)
+         ******************************************/
+        if(repaidDebt > 0){ // repay debt for token, approve should be proceed
+            SafeToken.safeTransferFrom(debtToken, msg.sender, address(this), repaidDebt);
+            IVault(vault).repayInToken(msg.sender, repaidDebt);
+        }
+        if(repaidDebtInBase > 0){ // repay debt for EVMOS
+            repaidDebt += IVault(vault).repayInBase{value: repaidDebtInBase}(msg.sender, 1);
+        }
 
+        Position storage p = positions[vault][positionId];
+        if(stakedAmount >= unstakedAmount){
+            _stake(p, stakedAmount - unstakedAmount);
+        } else {
+            _unstake(
+                p,
+                vault,
+                unstakedAmount - stakedAmount,
+                debtInBaseChanged < 0 ? uint256(-debtInBaseChanged) : 0
+            );
+        }
+
+        emit PositionChanged(
+            msg.sender,
+            vault,
+            shareToAmount(p.share),
+            p.share,
+            debtAmountOf(msg.sender, vault)
+        );
     }
 
     /**
@@ -495,13 +559,13 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         (bool healthy, uint256 debtInBase) = _isHealthy(vault, p.share, debt);
         require(healthy, "kill: still safe position.");
 
-        uint256 unStakedAmount = _unstake(p, vault, p.share);
+        uint256 unstakedAmount = _unstakeAll(p, vault);
 
         emit Kill(
             msg.sender,
             p.user,
             vault,
-            unStakedAmount - debtInBase,
+            unstakedAmount - debtInBase,
             debtInBase,
             debt,
             p.share
