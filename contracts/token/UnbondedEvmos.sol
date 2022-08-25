@@ -24,6 +24,9 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     uint256 public override lastUnbondedAt;
     uint256 public override unbondingInterval;   // maybe 14 + 2 days
 
+    uint256 public totalAmount;
+    uint256 public totalShare;
+
     /// @notice kor) 논의 필요
     // uint256 public unbondLimit = 7;
 

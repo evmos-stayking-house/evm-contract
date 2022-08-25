@@ -56,8 +56,7 @@ interface IVault {
 
     function repayInBase(
         address user, 
-        uint256 minRepaid,
-        uint256 restoredDebtInBase
+        uint256 minRepaid
     ) payable external returns(uint256 repaid);
 
     function takeDebtOwnership(

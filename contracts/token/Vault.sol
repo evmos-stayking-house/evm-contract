@@ -303,8 +303,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     /// @param minRepaid  minimum repaid debtToken amonut
     function repayInBase(
         address user,
-        uint256 minRepaid,
-        uint256 restoredDebtInBase
+        uint256 minRepaid
     ) public payable override onlyStayking returns(uint256 repaid) {
         repaid = _swapFromBase(msg.value, minRepaid);
         _repay(user, repaid);
