@@ -523,16 +523,15 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function positionInfo(
         address user,
         address debtToken
-    ) public override view returns (uint256 positionValueInBase, uint256 debtInBase) {
+    ) public override view returns (uint256 positionValueInBase, uint256 debtInBase, uint256 debt) {
         address vault = tokenToVault[debtToken];
         uint256 positionId = positionIdOf[user][vault];
         Position memory p = positions[vault][positionId];
 
         positionValueInBase = shareToAmount(p.share);
 
-        uint256 debt = IVault(vault).debtAmountOf(user);
+        debt = IVault(vault).debtAmountOf(user);
         debtInBase = IVault(vault).getBaseIn(debt);
-
     }
 
     function isKillable(

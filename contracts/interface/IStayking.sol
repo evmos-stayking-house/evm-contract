@@ -73,7 +73,7 @@ interface IStayking {
     function positionInfo(
         address user,
         address vault
-    ) external view returns (uint256 equityInBase, uint256 debtInBase);
+    ) external view returns (uint256 equityInBase, uint256 debtInBase, uint256 debt);
 
     function isKillable(address debtToken, uint256 positionId) external view returns(bool);
     

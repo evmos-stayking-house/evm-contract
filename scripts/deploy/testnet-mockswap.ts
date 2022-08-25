@@ -21,6 +21,7 @@ const TOKEN_ADDRESS = {
 async function deployTestnetWithMockswap() {
     const [deployer, delegator] = await ethers.getSigners();
     console.log("deployer value: ", (await deployer.getBalance()).div(toBN(1, 18)).toString())
+    console.log("delegator value: ", (await delegator.getBalance()).div(toBN(1, 18)).toString())
 
     // ERC20 tokens
     // const mockUSDT = await craftform.contract("ERC20").upsertConfig({
@@ -32,7 +33,7 @@ async function deployTestnetWithMockswap() {
 
     // Deploy MockSwap & MockSwapHelper
     // set evmos_supply here
-    const swapHelper = await deployMockSwap(deployer, [mockUSDC], 2000);
+    const swapHelper = await deployMockSwap(deployer, [mockUSDC], 200);
 
     const interestModel = await deployTripleSlopeModel(deployer);
 
@@ -46,8 +47,8 @@ async function deployTestnetWithMockswap() {
         deployer,
         Stayking,
         swapHelper.address,
-        "interest bearing mockUSDT Vault",
-        "ibmockUSDT",
+        "interest bearing mockUSDC Vault",
+        "ibmockUSDC",
         mockUSDC.address,
         interestModel.address,
         1000  // 10%

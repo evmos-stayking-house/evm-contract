@@ -1,0 +1,167 @@
+{
+  "address": "0xf274De14171Ab928A5Ec19928cE35FaD91a42B64",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "CEIL_SLOPE_1",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "CEIL_SLOPE_2",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "CEIL_SLOPE_3",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "DENOM",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "MAX_INTEREST_SLOPE_1",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "MAX_INTEREST_SLOPE_2",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "MAX_INTEREST_SLOPE_3",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "debt",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "floating",
+          "type": "uint256"
+        }
+      ],
+      "name": "calcInterestRate",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x60244f17a259ce6098a0b25ed6b7551571ef0a9d008291d47e44a5311f35643a",
+  "receipt": {
+    "to": null,
+    "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "contractAddress": "0xf274De14171Ab928A5Ec19928cE35FaD91a42B64",
+    "transactionIndex": 0,
+    "gasUsed": "443563",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0xcfa62d6228602fdf473664f139e1214b1c784e102418eaa57385e974915a2c4a",
+    "transactionHash": "0x60244f17a259ce6098a0b25ed6b7551571ef0a9d008291d47e44a5311f35643a",
+    "logs": [],
+    "blockNumber": 4966200,
+    "cumulativeGasUsed": "443563",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "73c0963e6a270f20e91a979d2b2a3383",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.4+commit.c7e474f2\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"CEIL_SLOPE_1\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"CEIL_SLOPE_2\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"CEIL_SLOPE_3\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DENOM\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_INTEREST_SLOPE_1\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_INTEREST_SLOPE_2\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_INTEREST_SLOPE_3\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"debt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"floating\",\"type\":\"uint256\"}],\"name\":\"calcInterestRate\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"calcInterestRate(uint256,uint256)\":{\"details\":\"Intrest Rate per Second \\uacc4\\uc0b0\\ud558\\uc5ec \\ubc18\\ud658\\uac00\\ub3d9\\ub960 = debt / (debt + floating)\",\"params\":{\"debt\":\"\\ub300\\ucd9c\\ub418\\uc5b4 \\ub098\\uac04\\ub3c8\",\"floating\":\"\\ub300\\uae30\\uc790\\uae08\"},\"returns\":{\"_0\":\"IR per 365days, denominator = 1e18\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/token/TripleSlopeModel.sol\":\"TripleSlopeModel\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[]},\"sources\":{\"contracts/interface/IInterestModel.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.8.3;\\n\\ninterface IInterestModel {\\n    function calcInterestRate(uint256 debt, uint256 floating)\\n        external\\n        pure\\n        returns (uint256);\\n}\\n\",\"keccak256\":\"0x5f427c1568f6891acc1dd5bd9ef3b0621046fb98f014cdbc6be9cd1850760a87\",\"license\":\"MIT\"},\"contracts/token/TripleSlopeModel.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.8.3;\\n\\nimport \\\"../interface/IInterestModel.sol\\\";\\n\\ncontract TripleSlopeModel is IInterestModel {\\n    /****************************\\n     * POLICY CONSTANT SECTIONS *\\n     ****************************/\\n\\n    uint256 public constant DENOM = 1e18;\\n\\n    uint256 public constant CEIL_SLOPE_1 = 60 * DENOM;\\n    uint256 public constant CEIL_SLOPE_2 = 90 * DENOM;\\n    uint256 public constant CEIL_SLOPE_3 = 100 * DENOM;\\n\\n    uint256 public constant MAX_INTEREST_SLOPE_1 = (20 * DENOM) / 100;\\n    uint256 public constant MAX_INTEREST_SLOPE_2 = (20 * DENOM) / 100;\\n    uint256 public constant MAX_INTEREST_SLOPE_3 = (150 * DENOM) / 100;\\n\\n    /// @dev Intrest Rate per Second \\uacc4\\uc0b0\\ud558\\uc5ec \\ubc18\\ud658\\n    /// @dev \\uac00\\ub3d9\\ub960 = debt / (debt + floating)\\n    /// @param debt \\ub300\\ucd9c\\ub418\\uc5b4 \\ub098\\uac04\\ub3c8\\n    /// @param floating \\ub300\\uae30\\uc790\\uae08\\n    /// @return IR per 365days, denominator = 1e18\\n    function calcInterestRate(uint256 debt, uint256 floating)\\n        external\\n        pure\\n        override\\n        returns (uint256)\\n    {\\n        if (debt == 0 && floating == 0) return 0;\\n\\n        uint256 total = debt + floating;\\n        uint256 utilization = (debt * (100 * DENOM)) / (total);\\n\\n        // \\uad6c\\uac04\\ubcc4 \\uc774\\uc790\\uc728\\n        if (utilization < CEIL_SLOPE_1) {\\n            // utilization(0~60%) - 0%~20% APY\\n            return\\n                (utilization * MAX_INTEREST_SLOPE_1) / CEIL_SLOPE_1 / 365 days;\\n        } else if (utilization < CEIL_SLOPE_2) {\\n            // utilization(60%~90%) - 20% APY\\n            return uint256(MAX_INTEREST_SLOPE_2) / 365 days;\\n        } else if (utilization < CEIL_SLOPE_3) {\\n            // utilization(90%~100%) - 20%~150% APY\\n            return\\n                (MAX_INTEREST_SLOPE_2 +\\n                    ((utilization - CEIL_SLOPE_2) *\\n                        (MAX_INTEREST_SLOPE_3 - MAX_INTEREST_SLOPE_2)) /\\n                    (CEIL_SLOPE_3 - CEIL_SLOPE_2)) / 365 days;\\n        } else {\\n            // \\uadf8 \\uc678 \\ubaa8\\ub4e0 \\uc0c1\\ud669 - 150% APY\\n            // \\uc0ac\\uc2e4\\uc0c1 \\uc774 \\uc870\\uac74\\uc73c\\ub85c \\ub4e4\\uc5b4\\uc62c \\uc218 \\uc5c6\\uc74c\\n            return MAX_INTEREST_SLOPE_3 / 365 days;\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0xea68b65d330a9d9ad9be31a469c5d73c6287e7d9bbc6435dbf39bac44d84ef00\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b50610714806100206000396000f3fe608060405234801561001057600080fd5b50600436106100885760003560e01c8063aa183d9a1161005b578063aa183d9a14610105578063cc3c29f914610123578063d4a99bbb14610141578063fbf3cb691461017157610088565b806304d0d1471461008d5780630e085778146100ab57806316343da4146100c9578063810c6aa8146100e7575b600080fd5b61009561018f565b6040516100a2919061052f565b60405180910390f35b6100b36101a7565b6040516100c0919061052f565b60405180910390f35b6100d16101cb565b6040516100de919061052f565b60405180910390f35b6100ef6101d7565b6040516100fc919061052f565b60405180910390f35b61010d6101ef565b60405161011a919061052f565b60405180910390f35b61012b610213565b604051610138919061052f565b60405180910390f35b61015b600480360381019061015691906104e4565b61022b565b604051610168919061052f565b60405180910390f35b6101796104ab565b604051610186919061052f565b60405180910390f35b670de0b6b3a7640000603c6101a491906105d1565b81565b6064670de0b6b3a764000060146101be91906105d1565b6101c891906105a0565b81565b670de0b6b3a764000081565b670de0b6b3a764000060646101ec91906105d1565b81565b6064670de0b6b3a7640000609661020691906105d1565b61021091906105a0565b81565b670de0b6b3a7640000605a61022891906105d1565b81565b6000808314801561023c5750600082145b1561024a57600090506104a5565b60008284610258919061054a565b9050600081670de0b6b3a7640000606461027291906105d1565b8661027d91906105d1565b61028791906105a0565b9050670de0b6b3a7640000603c61029e91906105d1565b811015610308576301e13380670de0b6b3a7640000603c6102bf91906105d1565b6064670de0b6b3a764000060146102d691906105d1565b6102e091906105a0565b836102eb91906105d1565b6102f591906105a0565b6102ff91906105a0565b925050506104a5565b670de0b6b3a7640000605a61031d91906105d1565b81101561035d576301e133806064670de0b6b3a7640000601461034091906105d1565b61034a91906105a0565b61035491906105a0565b925050506104a5565b670de0b6b3a7640000606461037291906105d1565b811015610470576301e13380670de0b6b3a7640000605a61039391906105d1565b670de0b6b3a764000060646103a891906105d1565b6103b2919061062b565b6064670de0b6b3a764000060146103c991906105d1565b6103d391906105a0565b6064670de0b6b3a764000060966103ea91906105d1565b6103f491906105a0565b6103fe919061062b565b670de0b6b3a7640000605a61041391906105d1565b8461041e919061062b565b61042891906105d1565b61043291906105a0565b6064670de0b6b3a7640000601461044991906105d1565b61045391906105a0565b61045d919061054a565b61046791906105a0565b925050506104a5565b6301e133806064670de0b6b3a7640000609661048c91906105d1565b61049691906105a0565b6104a091906105a0565b925050505b92915050565b6064670de0b6b3a764000060146104c291906105d1565b6104cc91906105a0565b81565b6000813590506104de816106c7565b92915050565b600080604083850312156104f757600080fd5b6000610505858286016104cf565b9250506020610516858286016104cf565b9150509250929050565b6105298161065f565b82525050565b60006020820190506105446000830184610520565b92915050565b60006105558261065f565b91506105608361065f565b9250827fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0382111561059557610594610669565b5b828201905092915050565b60006105ab8261065f565b91506105b68361065f565b9250826105c6576105c5610698565b5b828204905092915050565b60006105dc8261065f565b91506105e78361065f565b9250817fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff04831182151516156106205761061f610669565b5b828202905092915050565b60006106368261065f565b91506106418361065f565b92508282101561065457610653610669565b5b828203905092915050565b6000819050919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601260045260246000fd5b6106d08161065f565b81146106db57600080fd5b5056fea264697066735822122090fe6ae462987ba93e16bedaf5486d1071c00cd0c8331e9ee192b724f7a174d264736f6c63430008040033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100885760003560e01c8063aa183d9a1161005b578063aa183d9a14610105578063cc3c29f914610123578063d4a99bbb14610141578063fbf3cb691461017157610088565b806304d0d1471461008d5780630e085778146100ab57806316343da4146100c9578063810c6aa8146100e7575b600080fd5b61009561018f565b6040516100a2919061052f565b60405180910390f35b6100b36101a7565b6040516100c0919061052f565b60405180910390f35b6100d16101cb565b6040516100de919061052f565b60405180910390f35b6100ef6101d7565b6040516100fc919061052f565b60405180910390f35b61010d6101ef565b60405161011a919061052f565b60405180910390f35b61012b610213565b604051610138919061052f565b60405180910390f35b61015b600480360381019061015691906104e4565b61022b565b604051610168919061052f565b60405180910390f35b6101796104ab565b604051610186919061052f565b60405180910390f35b670de0b6b3a7640000603c6101a491906105d1565b81565b6064670de0b6b3a764000060146101be91906105d1565b6101c891906105a0565b81565b670de0b6b3a764000081565b670de0b6b3a764000060646101ec91906105d1565b81565b6064670de0b6b3a7640000609661020691906105d1565b61021091906105a0565b81565b670de0b6b3a7640000605a61022891906105d1565b81565b6000808314801561023c5750600082145b1561024a57600090506104a5565b60008284610258919061054a565b9050600081670de0b6b3a7640000606461027291906105d1565b8661027d91906105d1565b61028791906105a0565b9050670de0b6b3a7640000603c61029e91906105d1565b811015610308576301e13380670de0b6b3a7640000603c6102bf91906105d1565b6064670de0b6b3a764000060146102d691906105d1565b6102e091906105a0565b836102eb91906105d1565b6102f591906105a0565b6102ff91906105a0565b925050506104a5565b670de0b6b3a7640000605a61031d91906105d1565b81101561035d576301e133806064670de0b6b3a7640000601461034091906105d1565b61034a91906105a0565b61035491906105a0565b925050506104a5565b670de0b6b3a7640000606461037291906105d1565b811015610470576301e13380670de0b6b3a7640000605a61039391906105d1565b670de0b6b3a764000060646103a891906105d1565b6103b2919061062b565b6064670de0b6b3a764000060146103c991906105d1565b6103d391906105a0565b6064670de0b6b3a764000060966103ea91906105d1565b6103f491906105a0565b6103fe919061062b565b670de0b6b3a7640000605a61041391906105d1565b8461041e919061062b565b61042891906105d1565b61043291906105a0565b6064670de0b6b3a7640000601461044991906105d1565b61045391906105a0565b61045d919061054a565b61046791906105a0565b925050506104a5565b6301e133806064670de0b6b3a7640000609661048c91906105d1565b61049691906105a0565b6104a091906105a0565b925050505b92915050565b6064670de0b6b3a764000060146104c291906105d1565b6104cc91906105a0565b81565b6000813590506104de816106c7565b92915050565b600080604083850312156104f757600080fd5b6000610505858286016104cf565b9250506020610516858286016104cf565b9150509250929050565b6105298161065f565b82525050565b60006020820190506105446000830184610520565b92915050565b60006105558261065f565b91506105608361065f565b9250827fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0382111561059557610594610669565b5b828201905092915050565b60006105ab8261065f565b91506105b68361065f565b9250826105c6576105c5610698565b5b828204905092915050565b60006105dc8261065f565b91506105e78361065f565b9250817fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff04831182151516156106205761061f610669565b5b828202905092915050565b60006106368261065f565b91506106418361065f565b92508282101561065457610653610669565b5b828203905092915050565b6000819050919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601260045260246000fd5b6106d08161065f565b81146106db57600080fd5b5056fea264697066735822122090fe6ae462987ba93e16bedaf5486d1071c00cd0c8331e9ee192b724f7a174d264736f6c63430008040033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "calcInterestRate(uint256,uint256)": {
+        "details": "Intrest Rate per Second 계산하여 반환가동률 = debt / (debt + floating)",
+        "params": {
+          "debt": "대출되어 나간돈",
+          "floating": "대기자금"
+        },
+        "returns": {
+          "_0": "IR per 365days, denominator = 1e18"
+        }
+      }
+    },
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": null
+  }
+}
