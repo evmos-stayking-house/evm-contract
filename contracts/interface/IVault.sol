@@ -64,6 +64,7 @@ interface IVault {
         uint256 amount
     ) external;
 
+    function getInterestInBase() external view returns (uint256);
     function payInterest(uint256 minPaidInterest) external payable;
 
     function pendRepay(

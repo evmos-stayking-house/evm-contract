@@ -22,6 +22,8 @@ interface IStayking {
 
     function killFactorBps() external view returns(uint256);
 
+    function reservedBps() external view returns(uint256);
+
     function debtAmountOf (
         address user,
         address vault
@@ -82,6 +84,7 @@ interface IStayking {
     /***********************
      * Only for Delegator *
      ***********************/
+    function getAccruedValue(uint256 currentTotalStaked) external view returns(uint256);
     function accrue(uint256 currentTotalStaked) payable external;
 
 }

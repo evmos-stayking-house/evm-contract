@@ -19,18 +19,19 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     event RemovePosition(address indexed user, address indexed vault, uint256 equity, uint256 debtInBase, uint256 debt, uint256 share);
     event PositionChanged(address indexed user, address indexed vault, uint256 amount, uint256 share, uint256 debt);
     event Kill(address indexed killer, address indexed user, address vault, uint256 equity, uint256 debtInBase, uint256 debt, uint256 share);
-    event Accrue(address indexed delegator, uint256 amount);
+    event Accrue(address indexed delegator, uint256 totalStaked, uint256 distributed);
 
     // Operation Events
     event AddVault(address token, address vault);
     event UpdateVault(address token, address vault);
-    event UpdateConfigs(uint256 minDebtInBase, uint256 killFactorBps);
+    event UpdateConfigs(uint256 minDebtInBase, uint256 killFactorBps, uint256 reservedBps);
     event ChangeDelegator(address delegator);
 
     address public delegator;
     mapping(address => bool) public whitelistedKiller;
 
     mapping(address => address) public override tokenToVault;
+    address[] public vaults;
 
     /// @dev kor) 유저가 예치한 금액 + auto-compound된 금액
     uint256 public totalAmount;
@@ -41,6 +42,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @dev min debtAmount in EVMOS (base token)
     uint256 public override minDebtInBase;
     uint256 public override killFactorBps;
+    uint256 public override reservedBps;
+
+    /// @dev EVMOS amount reserved by Protocol
+    uint256 public reservedPool;
 
     IUnbondedEvmos public uEVMOS;
 
@@ -112,15 +117,28 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address token,
         address vault
     ) public override onlyOwner {
-        bool isNewVault = (tokenToVault[token] == address(0));
+        address beforeVault = tokenToVault[token];
 
-        if(isNewVault)
+        if(beforeVault == address(0)){
+            vaults.push(vault);
             emit AddVault(token, vault);
+        }
         else {
             require(
-                IVault(tokenToVault[token]).totalDebtAmount() == 0,
+                IVault(beforeVault).totalDebtAmount() == 0,
                 "updateVault: Debt remains on the existing vault."
             );
+
+            uint256 vaultsLength = vaults.length;
+            bool vaultReplaced = false;
+            for (uint256 i = 0; i < vaultsLength; i++) {
+                if(vaults[i] == beforeVault){
+                    vaults[i] = vault;
+                    vaultReplaced = true;
+                    break;
+                }
+            }
+            assert(vaultReplaced);
             emit UpdateVault(token, vault);
         }
 
@@ -138,11 +156,13 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function updateConfigs(
         uint256 _minDebtInBase,
-        uint256 _killFactorBps
+        uint256 _killFactorBps,
+        uint256 _reservedBps
     ) public onlyOwner {
         minDebtInBase = _minDebtInBase;
         killFactorBps = _killFactorBps;
-        emit UpdateConfigs(_minDebtInBase, _killFactorBps);
+        reservedBps = _reservedBps;
+        emit UpdateConfigs(_minDebtInBase, _killFactorBps, _reservedBps);
     }
 
     /***********************
@@ -253,7 +273,9 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         );
 
         // borrow token from vault
-        uint256 debt = IVault(vault).loan(msg.sender, debtInBase);
+        // debtInBase == 0 -> 1x leverage
+        uint256 debt = debtInBase > 0 ? 
+            IVault(vault).loan(msg.sender, debtInBase) : 0;
 
         positions[vault].push(
             Position({
@@ -532,7 +554,6 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         uint256 debt = IVault(vault).debtAmountOf(user);
         debtInBase = IVault(vault).getBaseIn(debt);
-
     }
 
     function isKillable(
@@ -576,14 +597,47 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /***********************
      * Only for Delegator *
      ***********************/
+    /// @param totalStaked  current total staked EVMOS (= last total amount + reward)
+    function getAccruedValue (
+        uint256 totalStaked
+    ) public view override returns(uint256) {
+        uint256 reward = totalStaked - totalAmount;
+        uint256 reserved = reward * 1E4 / reservedBps;
+
+        uint256 vaultsLength = vaults.length;
+        uint256 interest = 0;
+        for(uint256 i = 0; i < vaultsLength; i++){
+            interest += IVault(vaults[i]).getInterestInBase();
+        }
+
+        return reserved + interest;
+    }
+    /// @param totalStaked  current total staked EVMOS (= last total amount + reward)
+    function getAccruedValue (
+        uint256 totalStaked
+    ) public view override returns(uint256) {
+        uint256 reward = totalStaked - totalAmount;
+        uint256 reserved = reward * 1E4 / reservedBps;
+
+        uint256 vaultsLength = vaults.length;
+        uint256 interest = 0;
+        for(uint256 i = 0; i < vaultsLength; i++){
+            interest += IVault(vaults[i]).getInterestInBase();
+        }
+
+        return reserved + interest;
+    }
+
+    /// @dev msg.value = distributed value to Protocol & Vault. 
+    /// (calculated by "getAccruedValue")
+    /// @param totalStaked  current total staked EVMOS
     function accrue(
-        uint256 currentTotalStaked
+        uint256 totalStaked
     ) payable public onlyDelegator override {
-        //// WARN!!
-        //// kor) delegator가 잘못 param을 넘겨주면 전체 유저의 수익이 좌지우지될 수 있음..!!
-        require(currentTotalStaked >= totalAmount, "accrue: currentTotalStaked < totalAmount");
-        uint256 compounded = currentTotalStaked - totalAmount;
-        totalAmount = currentTotalStaked;
+        uint256 distributed = getAccruedValue(totalStaked);
+        require(msg.value >= distributed, "accrue: msg.value < getAccruedValue(totalStaked)");
+
+
         emit Accrue(msg.sender, compounded);
     }
 

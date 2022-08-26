@@ -34,13 +34,13 @@ async function deployLocal() {
 
   await uEVMOS.updateMinterStatus(Stayking.address, true);
   
-  const ibtATOM = await deployVault(
+  const ibtUSDC = await deployVault(
     deployer,
     Stayking,
     swapHelper.address,
     "interest bearing tATOM Vault",
-    "ibtATOM",
-    tATOM.address,
+    "ibtUSDC",
+    tUSDC.address,
     interestModel.address,
     1000  // 10%
   );
