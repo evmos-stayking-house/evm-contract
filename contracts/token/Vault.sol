@@ -66,6 +66,11 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         _;
     }
 
+    modifier saveUtilRate() {
+        _;
+        saveUtilizationRateBps();
+    }
+
     /****************
      * Initializer *
     *****************/
@@ -166,7 +171,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         if (block.timestamp >= lastSavedUtilizationRateTime + 1 days) {
             yesterdayUtilRate = utilizationRateBps();
             lastSavedUtilizationRateTime += 1 days;
-            accInterest += (totalDebtAmount * getInterestRate() / 1E18);
+            accInterest += (totalDebtAmount * getInterestRate() / 1E18 / 365);
             emit UtilizationRate(yesterdayUtilRate);
         }
     }
@@ -239,7 +244,9 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
      ************************************/
 
     /// @notice user approve should be preceded
-    function deposit(uint256 amount) public override returns(uint256 share){
+    function deposit(
+        uint256 amount
+    ) public override saveUtilRate returns(uint256 share){
         share = amountToShare(amount);
         SafeToken.safeTransferFrom(token, msg.sender, address(this), amount);
         _mint(msg.sender, share);
@@ -247,8 +254,11 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         emit Deposit(msg.sender, amount, share);
     }
 
-    function withdraw(uint256 share) public override returns(uint256 amount){
+    function withdraw(
+        uint256 share
+    ) public override saveUtilRate returns(uint256 amount){
         amount = shareToAmount(share);
+        // TODO minReserved?
         _burn(msg.sender, share);
         SafeToken.safeTransfer(token, msg.sender, amount);
 
@@ -259,7 +269,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     function loan(
         address user,
         uint256 debtInBase
-    ) public override onlyStayking returns (uint256 debt) {
+    ) public override onlyStayking saveUtilRate returns (uint256 debt) {
         require(user != address(0), "loan: zero address cannot loan.");
 
         ///@dev swap token -> (amountInBase)EVMOS
@@ -281,7 +291,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     function _repay(
         address user,
         uint256 amount
-    ) private {
+    ) private saveUtilRate {
         require(debtAmountOf[user] >= amount, "repay: too much amount to repay.");
         unchecked {
             debtAmountOf[user] -= amount;
@@ -321,9 +331,17 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         emit TransferDebtOwnership(from, msg.sender, amount);
     }
 
-    function payInterest(uint256 minPaidInterest) public payable override onlyStayking {
+    /// @dev calculate interest (1 day) in base (EVMOS)
+    function getInterestInBase() public override view returns(uint256) {
+        return accInterest > 0 ? getBaseIn(accInterest) : 0;
+    }
+
+    function payInterest(
+        uint256 minPaidInterest
+    ) public payable override onlyStayking saveUtilRate {
         uint256 paidInterest = _swapFromBase(msg.value, minPaidInterest);
-        require(accInterest >= paidInterest, "msg.value is greater than accumulated interest.");
+        require(paidInterest <= accInterest, "payInterest: msg.value is greater than accumulated interest.");
+        require(paidInterest >= minPaidInterest, "payInterest: Lack of tokens to pay interest.");
         unchecked {
             accInterest -= paidInterest;
         }
