@@ -95,7 +95,8 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         // @TODO policy
         updateConfigs(
             10e18,  // minDebtInBase (10EVMOS)
-            8000    // killFactorBps
+            8000,    // killFactorBps
+            3000     // reservedBps
         );
 
         uEVMOS = IUnbondedEvmos(uEVMOS_);
@@ -612,21 +613,6 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         return reserved + interest;
     }
-    /// @param totalStaked  current total staked EVMOS (= last total amount + reward)
-    function getAccruedValue (
-        uint256 totalStaked
-    ) public view override returns(uint256) {
-        uint256 reward = totalStaked - totalAmount;
-        uint256 reserved = reward * 1E4 / reservedBps;
-
-        uint256 vaultsLength = vaults.length;
-        uint256 interest = 0;
-        for(uint256 i = 0; i < vaultsLength; i++){
-            interest += IVault(vaults[i]).getInterestInBase();
-        }
-
-        return reserved + interest;
-    }
 
     /// @dev msg.value = distributed value to Protocol & Vault. 
     /// (calculated by "getAccruedValue")
@@ -636,9 +622,9 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     ) payable public onlyDelegator override {
         uint256 distributed = getAccruedValue(totalStaked);
         require(msg.value >= distributed, "accrue: msg.value < getAccruedValue(totalStaked)");
+        // TODO
 
-
-        emit Accrue(msg.sender, compounded);
+        emit Accrue(msg.sender, totalStaked, distributed);
     }
 
     /// @dev Fallback function to accept EVMOS.

@@ -46,24 +46,6 @@ export type ReentrancyGuardUpgradeableDeployArgs = DeployArgs<ReentrancyGuardUpg
 // IERC20
 export type IERC20Args = [] | undefined;
 export type IERC20DeployArgs = DeployArgs<IERC20Args>;
-// EvmoSwapRouter
-export type EvmoSwapRouterArgs = [address, address];
-export type EvmoSwapRouterDeployArgs = DeployArgs<EvmoSwapRouterArgs>;
-// IEvmoSwapFactory
-export type IEvmoSwapFactoryArgs = [] | undefined;
-export type IEvmoSwapFactoryDeployArgs = DeployArgs<IEvmoSwapFactoryArgs>;
-// IEvmoSwapPair
-export type IEvmoSwapPairArgs = [] | undefined;
-export type IEvmoSwapPairDeployArgs = DeployArgs<IEvmoSwapPairArgs>;
-// IEvmoSwapRouter01
-export type IEvmoSwapRouter01Args = [] | undefined;
-export type IEvmoSwapRouter01DeployArgs = DeployArgs<IEvmoSwapRouter01Args>;
-// IEvmoSwapRouter02
-export type IEvmoSwapRouter02Args = [] | undefined;
-export type IEvmoSwapRouter02DeployArgs = DeployArgs<IEvmoSwapRouter02Args>;
-// IWETH
-export type IWETHArgs = [] | undefined;
-export type IWETHDeployArgs = DeployArgs<IWETHArgs>;
 // MockSwap
 export type MockSwapArgs = [address[]];
 export type MockSwapDeployArgs = DeployArgs<MockSwapArgs>;
