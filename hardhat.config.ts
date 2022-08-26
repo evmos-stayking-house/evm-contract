@@ -19,9 +19,9 @@ const config: HardhatUserConfig = {
     },
     networks: {
         hardhat: {
-            forking: {
-                url: "https://eth.bd.evmos.dev:8545",
-            },
+            // forking: {
+            //     url: "https://eth.bd.evmos.dev:8545",
+            // },
         },
         localhost: {
             accounts: [

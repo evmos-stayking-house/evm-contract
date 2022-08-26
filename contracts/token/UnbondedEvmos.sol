@@ -5,6 +5,7 @@ import "../interface/IUnbondedEvmos.sol";
 import "../interface/IVault.sol";
 import "../lib/OwnableUpgradeable.sol";
 import "../lib/utils/SafeToken.sol";
+import "hardhat/console.sol";
 
 contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable { 
 
@@ -47,10 +48,10 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
      lockedIds: locks 배열에 들어있는 Lock 객체의 array index
      accounts can request up to 7 unbonds for 14 days, 
      just like when delegate EVMOS to Validator. 
+     lastUnlocked: last unlocked index of "lockedIds"
      */
     struct LockedQueue {
-        uint128 front;
-        uint128 rear;
+        uint256 lastUnlocked;
         uint256[] lockedIds;
     }
     mapping(address => LockedQueue) public lockedOf;
@@ -143,18 +144,18 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         uint256 minRepaid
     ) private {
         lockedQueue = lockedOf[account];
-        uint128 front = lockedQueue.front; 
-        uint128 rear = lockedQueue.rear; 
+        uint256 lastUnlocked = lockedQueue.lastUnlocked; 
+        uint256 queueLength = lockedQueue.lockedIds.length;
 
-        if(front == rear)   // no unlockable amounts
+        if(lastUnlocked == queueLength)   // no unlockable amounts
             return;
 
         uint256 unlockable;
         uint256 returnable;
-        uint128 i = front;
+        uint256 i = lastUnlocked + 1;
         
         // assert under 7 loop.
-        for (i; i < rear; i++) {
+        for (i; i < queueLength; i++) {
             uint256 lockedId = lockedQueue.lockedIds[i];
             Locked storage lock = locks[lockedId];
             
@@ -171,10 +172,10 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
                 break;
         }
 
-        // if unlockable > 0, front < i < rear
+        // if unlockable > 0, i > lastUnlocked
         if(unlockable > 0){
 
-            lockedQueue.front = i + 1;           // 1. reset queue front
+            lockedQueue.lastUnlocked = i;           // 1. reset queue front
             _burn(account, unlockable);
 
             // 3. return EVMOS is returnable exists
@@ -228,14 +229,11 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
             })
         );
 
-        locksLength = locks.length - 1;
-        uint128 newlockedIndex = lockedQueue.rear;
-        lockedQueue.lockedIds[newlockedIndex] = locksLength;
-
-        lockedQueue.rear = newlockedIndex + 1;
+        uint256 newLockedId = locks.length - 1;
+        lockedQueue.lockedIds.push(newLockedId);
 
         _mint(to, amount);
-        emit Lock(to, vault, locksLength);
+        emit Lock(to, vault, newLockedId);
     }
 
     // unlock all because of debt.
@@ -256,16 +254,16 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     function getUnlockable(
         address account
     ) public override view returns(uint256 unlockable, uint256 debt) {
-        uint128 front = lockedOf[account].front; 
-        uint128 rear = lockedOf[account].rear; 
+        uint256 lastUnlocked = lockedOf[account].lastUnlocked; 
+        uint256 queueLength = lockedOf[account].lockedIds.length; 
         uint256[] memory lockedIds = lockedOf[account].lockedIds;
 
-        if(front == rear)   // no unlockable amounts
+        if(lastUnlocked == queueLength)   // no unlockable amounts
             return (0, 0);
         
         // TODO assert under 7 loop?
         // kor) 가스비 너무 많이 들게 되면 트랜잭션 실패할듯..
-        for (uint128 i = front; i < rear; i++) {
+        for (uint256 i = lastUnlocked + 1; i < queueLength; i++) {
             Locked memory lock = locks[lockedIds[i]];
             if(lock.unlockedAt <= block.timestamp){
                 unlockable += lock.amount;

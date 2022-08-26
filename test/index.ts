@@ -27,9 +27,10 @@ describe('EVMOS Hackathon', async () => {
         return [usdc, ibUsdc]
     }
 
-    before(async () => {
+    before(async function (){
         await deployLocal();
-        const [deployer, delegator, lender1, staker1] = await ethers.getSigners();
+        [deployer, delegator, lender1, staker1] = await ethers.getSigners();
+
         tUSDC = await craftform.contract("ERC20Ownable").attach("tUSDC");
         ibtUSDC = await craftform.contract("Vault").attach("ibtUSDC");
         Stayking = await craftform.contract("Stayking").attach();
@@ -109,6 +110,8 @@ describe('EVMOS Hackathon', async () => {
                 debtInBase,
                 {value: equity}
             );
+
+            await Stayking.connect(staker1).removePosition(tUSDC.address);
         })
     })
 })
