@@ -48,12 +48,12 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
     // Pending Debts
     mapping(address => uint256) public pendingDebtShareOf;
-    uint256 totalPendingDebtShare;
-    uint256 totalPendingDebtAmount;
+    uint256 public totalPendingDebtShare;
+    uint256 public totalPendingDebtAmount;
 
-    uint256 minReservedBps;
-    uint256 yesterdayUtilRate;
-    uint256 accInterest;
+    uint256 public minReservedBps;
+    uint256 public yesterdayUtilRate;
+    uint256 public override accInterest;
 
     uint lastSavedUtilizationRateTime;
 
@@ -339,12 +339,20 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     function payInterest(
         uint256 minPaidInterest
     ) public payable override onlyStayking saveUtilRate {
-        uint256 paidInterest = _swapFromBase(msg.value, minPaidInterest);
-        require(paidInterest <= accInterest, "payInterest: msg.value is greater than accumulated interest.");
-        require(paidInterest >= minPaidInterest, "payInterest: Lack of tokens to pay interest.");
-        unchecked {
+        uint256 interestInBase = getInterestInBase();
+        uint256 paidInterest;
+        
+        if(msg.value > interestInBase){
+            paidInterest = _swapFromBase(interestInBase, accInterest);
+            // return remained EVMOS
+            SafeToken.safeTransferEVMOS(msg.sender, msg.value - interestInBase);
             accInterest -= paidInterest;
         }
+        else {
+            paidInterest = _swapFromBase(msg.value, minPaidInterest);
+            accInterest -= paidInterest;
+        }
+
         emit PayInterest(paidInterest, accInterest);
     }
 

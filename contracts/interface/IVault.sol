@@ -14,10 +14,12 @@ interface IVault {
     function totalAmount() external view returns(uint256);
 
     function debtAmountOf(address user) external view returns(uint256);
-
+    
     function debtAmountInBase(address user) external view returns(uint256);
 
     function totalDebtAmount() external view returns(uint256);
+
+    function accInterest() external view returns(uint256);
 
     function utilizationRateBps() external view returns(uint256);
 
