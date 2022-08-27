@@ -12,7 +12,7 @@ async function deployLocal() {
   const [deployer, delegator] = await ethers.getSigners();
 
   await setBalance(deployer.address, toBN(1, 30));
-  await setBalance(delegator.address, toBN(1, 30));
+  await setBalance(delegator.address, 0);
 
   // Deploy ERC20 tokens
   const tATOM = await deployERC20(deployer, "Local Test ATOM", "tATOM");

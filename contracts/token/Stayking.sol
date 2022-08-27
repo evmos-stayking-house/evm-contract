@@ -464,8 +464,6 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         @dev if msg.value > 0, changeEquityInBase >= 0
              since msg.value = changeEquityInBase + repayDebtInBase
      */
-
-     
     function changePosition(
         address debtToken,
         int256  equityInBaseChanged,
@@ -546,14 +544,14 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function positionInfo(
         address user,
         address debtToken
-    ) public override view returns (uint256 positionValueInBase, uint256 debtInBase) {
+    ) public override view returns (uint256 positionValueInBase, uint256 debtInBase, uint256 debt) {
         address vault = tokenToVault[debtToken];
         uint256 positionId = positionIdOf[user][vault];
         Position memory p = positions[vault][positionId];
 
         positionValueInBase = shareToAmount(p.share);
 
-        uint256 debt = IVault(vault).debtAmountOf(user);
+        debt = IVault(vault).debtAmountOf(user);
         debtInBase = IVault(vault).getBaseIn(debt);
     }
 
@@ -603,7 +601,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 totalStaked
     ) public view override returns(uint256) {
         uint256 reward = totalStaked - totalAmount;
-        uint256 reserved = reward * 1E4 / reservedBps;
+        uint256 reserved = reward * reservedBps / 1E4;
 
         uint256 vaultsLength = vaults.length;
         uint256 interest = 0;
@@ -614,35 +612,59 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return reserved + interest;
     }
 
-    /// @dev msg.value = distributed value to Protocol & Vault. 
-    /// (calculated by "getAccruedValue")
-    /// @param totalStaked  current total staked EVMOS
+    /// @dev msg.value = all of staking reward 
+    /// @param totalStaked  current total staked EVMOS before distributed
     function accrue(
         uint256 totalStaked
     ) payable public onlyDelegator override {
-        require(
-            msg.value >= getAccruedValue(totalStaked), 
-            "accrue: msg.value < getAccruedValue(totalStaked)"
-        );
 
-        uint256 distributed = 0;
+        // 1. distribute to Protocol
+        uint256 reserved = (totalStaked - totalAmount) * reservedBps / 1E4;
+        reservedPool += reserved;
 
+        uint256 sumInterests = 0;
         uint256 vaultsLength = vaults.length;
+        /// @dev save interest for each vault
+        uint256[] memory interestFor = new uint256[](vaultsLength);
         for(uint256 i = 0; i < vaultsLength; i++){
-            uint256 interest = IVault(vaults[i]).getInterestInBase();
-            IVault(vaults[i]).payInterest{value: interest}(IVault(vaults[i]).accInterest());
-            distributed += interest;
+            interestFor[i] = IVault(vaults[i]).getInterestInBase();
+            sumInterests += interestFor[i];
         }
 
-        uint256 reserved = (totalStaked - totalAmount) * 1E4 / reservedBps;
-        reservedPool += reserved;
-        
-        distributed += reserved;
-        require(distributed <= msg.value, "Lack of msg.value to distribute.");
+        /// @dev most case, all of staking reward >= vault interests + reserved
+        uint256 distributable = msg.value - reserved;
+        if(distributable >= sumInterests){
+            for(uint256 i = 0; i < vaultsLength; i++){
+                IVault(vaults[i]).payInterest{value: interestFor[i]}(
+                    IVault(vaults[i]).accInterest()
+                );
+            }
 
-        totalAmount = totalStaked;
+            totalAmount = totalStaked - reserved - sumInterests;
 
-        emit Accrue(msg.sender, totalStaked, distributed);
+            // return remained EVMOS
+            uint256 remained = msg.value - reserved - sumInterests;
+            if(remained > 0){
+                SafeToken.safeTransferEVMOS(msg.sender, remained);
+            }
+
+            emit Accrue(msg.sender, totalStaked, reserved + sumInterests);
+        }
+    /**
+        @dev
+        else case is when the sum of interest for vaults is insufficient.
+        this case, totalAmount not changes
+        */
+        else {  
+            for(uint256 i = 0; i < vaultsLength; i++){
+                IVault vault = IVault(vaults[i]);
+                uint256 interestInBase = interestFor[i] * distributable / sumInterests;
+                uint256 minPaidInterest = vault.getTokenOut(interestInBase);
+                vault.payInterest{value: interestInBase}(minPaidInterest);
+            }
+
+            emit Accrue(msg.sender, totalStaked, msg.value);
+        }
     }
 
     /// @dev Fallback function to accept EVMOS.

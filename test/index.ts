@@ -1,14 +1,17 @@
 import { expect } from 'chai'
 import { craftform, ethers } from 'hardhat'
 import { before } from 'mocha'
-import { ERC20OwnableCraft, StaykingCraft, UnbondedEvmosCraft, VaultCraft } from '../crafts'
+import { ERC20OwnableCraft, IVaultConfig, StaykingCraft, UnbondedEvmosCraft, VaultCraft } from '../crafts'
 import deployLocal from '../scripts/deploy/localhost'
 import { toBN } from '../scripts/utils'
 import "../crafts"
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
+import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
 
 
 const toUSDC = (usdc: number) => toBN(usdc, 18);
+const toEVMOS = (evmos: number) => toBN(evmos, 18);
+
 describe('EVMOS Hackathon', async () => {
     let deployer: SignerWithAddress
     let delegator: SignerWithAddress
@@ -30,6 +33,9 @@ describe('EVMOS Hackathon', async () => {
     before(async function (){
         await deployLocal();
         [deployer, delegator, lender1, staker1] = await ethers.getSigners();
+
+        await setBalance(staker1.address, toBN(1000, 18));
+
 
         tUSDC = await craftform.contract("ERC20Ownable").attach("tUSDC");
         ibtUSDC = await craftform.contract("Vault").attach("ibtUSDC");
@@ -97,12 +103,13 @@ describe('EVMOS Hackathon', async () => {
     
     })
     
-    describe("2. Stayking:: Add/Handle position", async function () {
-        it("Add Position x3 leverage", async function (){    
+    describe("2. Stayking:: Add/Adjust position", async function () {
+        it("First add position (leverage x3)", async function (){    
             const leverage = 3;
-            const equity = toUSDC(100);
+            const equity = toEVMOS(100);
             const debtInBase = equity.mul(leverage - 1);
 
+            const beforeEVMOS = await staker1.getBalance();
             await tUSDC.connect(staker1).approve(ibtUSDC.address, equity);
             await Stayking.connect(staker1).addPosition(
                 tUSDC.address,
@@ -110,8 +117,97 @@ describe('EVMOS Hackathon', async () => {
                 debtInBase,
                 {value: equity}
             );
+            const afterEVMOS = await staker1.getBalance();
 
+            expect(beforeEVMOS.sub(afterEVMOS)).to.approximately(equity, toBN(1, 16));
+            
+            const positionId = await Stayking.positionIdOf(staker1.address, ibtUSDC.address);
+            expect(positionId).to.eq(1);
+            const [positionValueInBase, positionDebtInBase, debt] = await Stayking.positionInfo(staker1.address, tUSDC.address);
+
+            // equity in position
+            expect(positionValueInBase.sub(positionDebtInBase)).to.equal(equity);
+            // debt in EVMOS in posittion
+            expect(positionDebtInBase).to.equal(debtInBase);
+            expect(await ibtUSDC.getBaseIn(debt)).to.equal(debtInBase);
+
+            expect(await ethers.provider.getBalance(ibtUSDC.address)).to.equal(0);
+            expect(await ethers.provider.getBalance(Stayking.address)).to.equal(0);
+            expect(await delegator.getBalance()).to.equal(positionValueInBase);
+        })
+
+        it("Add Equity", async function(){
+            const extraEquity = toEVMOS(50);
+
+            const [beforePosVaule, beforeDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
+            const beforeTotalStaked = await delegator.getBalance();
+            
+            await Stayking.connect(staker1).changePosition(
+                tUSDC.address,
+                extraEquity,
+                0,
+                0,
+                {value: extraEquity}
+            );
+            const [afterPosVaule, afterDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
+                
+            // position value should be increased
+            expect(afterPosVaule.sub(beforePosVaule)).to.equal(extraEquity);
+            // debt should not be changed
+            expect(afterDebtInBase).to.equal(beforeDebtInBase);
+
+            expect(await ethers.provider.getBalance(Stayking.address)).to.equal(0);
+            const afterTotalStaked = await delegator.getBalance();
+            expect(afterTotalStaked.sub(beforeTotalStaked)).to.equal(extraEquity);
+        })
+
+        it("Add Debt", async function(){
+            const extraDebtInBase = toEVMOS(50);
+
+            const [beforePosVaule, beforeDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
+            const beforeTotalStaked = await delegator.getBalance();
+            
+            await Stayking.connect(staker1).changePosition(
+                tUSDC.address,
+                0,
+                extraDebtInBase,
+                0
+            );
+            const [afterPosVaule, afterDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
+                
+            // position value should be increased
+            expect(afterPosVaule.sub(beforePosVaule)).to.equal(extraDebtInBase, "Position value not increased properly");
+            // debt should be increased
+            expect(afterDebtInBase.sub(beforeDebtInBase)).to.equal(extraDebtInBase, "Debt value not increased properly");
+
+            expect(await ethers.provider.getBalance(Stayking.address)).to.equal(0);
+            const afterTotalStaked = await delegator.getBalance();
+            expect(afterTotalStaked.sub(beforeTotalStaked)).to.equal(extraDebtInBase);
+        })
+
+        it("Cannot borrow debt over debt ratio", async function(){
+            const extraDebtInBase = toEVMOS(500);
+            expect(
+                Stayking.connect(staker1).changePosition(
+                    tUSDC.address,
+                    0,
+                    extraDebtInBase,
+                    0
+                )
+            ).to.be.revertedWith("Loan: Cant' loan debt anymore.")
+        })
+
+        it("Remove Position", async function (){
+            const [beforePosVaule, beforeDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
+            
+            const beforeUEvmos = await uEVMOS.balanceOf(staker1.address);
             await Stayking.connect(staker1).removePosition(tUSDC.address);
+            const afterUEvmos = await uEVMOS.balanceOf(staker1.address);
+            const [afterPosVaule, afterDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
+
+            expect(afterUEvmos.sub(beforeUEvmos)).to.equal(beforePosVaule);
+            expect(afterPosVaule).to.equal(0);
+            expect(afterDebtInBase).to.equal(beforeDebtInBase);
         })
     })
 })
