@@ -620,9 +620,27 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function accrue(
         uint256 totalStaked
     ) payable public onlyDelegator override {
-        uint256 distributed = getAccruedValue(totalStaked);
-        require(msg.value >= distributed, "accrue: msg.value < getAccruedValue(totalStaked)");
-        // TODO
+        require(
+            msg.value >= getAccruedValue(totalStaked), 
+            "accrue: msg.value < getAccruedValue(totalStaked)"
+        );
+
+        uint256 distributed = 0;
+
+        uint256 vaultsLength = vaults.length;
+        for(uint256 i = 0; i < vaultsLength; i++){
+            uint256 interest = IVault(vaults[i]).getInterestInBase();
+            IVault(vaults[i]).payInterest{value: interest}(IVault(vaults[i]).accInterest());
+            distributed += interest;
+        }
+
+        uint256 reserved = (totalStaked - totalAmount) * 1E4 / reservedBps;
+        reservedPool += reserved;
+        
+        distributed += reserved;
+        require(distributed <= msg.value, "Lack of msg.value to distribute.");
+
+        totalAmount = totalStaked;
 
         emit Accrue(msg.sender, totalStaked, distributed);
     }
