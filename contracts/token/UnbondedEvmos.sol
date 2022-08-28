@@ -26,16 +26,16 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     uint256 public override unbondingInterval;   // maybe 14 + 2 days
 
     uint256 public totalAmount;
-    uint256 public totalShare;
+    uint256 public override totalSupply;
 
-    /// @notice kor) 논의 필요
+    /// @dev unbondLimit?
     // uint256 public unbondLimit = 7;
 
     struct Locked {
         bool received;
         address account;
         address vault;
-        uint256 amount;
+        uint256 share;
         uint256 debtShare;
         uint256 unlockedAt;
     }
@@ -48,15 +48,13 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
      lockedIds: locks 배열에 들어있는 Lock 객체의 array index
      accounts can request up to 7 unbonds for 14 days, 
      just like when delegate EVMOS to Validator. 
-     lastUnlocked: last unlocked index of "lockedIds"
      */
     struct LockedQueue {
-        uint256 lastUnlocked;
+        uint256 nextUnlocked;
         uint256[] lockedIds;
     }
     mapping(address => LockedQueue) public lockedOf;
     mapping(address => uint256) _balances;
-    uint256 public override totalSupply;
 
     /// @notice should set minter (maybe Stayking) after deployed
     function __UnbondedEvmos_init(
@@ -97,23 +95,29 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         uint256 amount
     ) private{
         require(account != address(0), "uEVMOS: mint to the zero address");
+        uint256 share = amountToShare(amount);
 
-        totalSupply += amount;
-        _balances[account] += amount;
+        totalAmount += amount;
+        totalSupply += share;
+
+        _balances[account] += share;
     }
 
     function _burn(
         address account,
-        uint256 amount
+        uint256 share
     ) private {
         require(account != address(0), "uEVMOS: burn from the zero address");
+        uint256 amount = shareToAmount(share);
 
         uint256 accountBalance = _balances[account];
         require(accountBalance >= amount, "uEVMOS: burn amount exceeds balance");
         unchecked {
             _balances[account] = accountBalance - amount;
         }
-        totalSupply -= amount;
+
+        totalSupply -= share;
+        totalAmount -= amount;
     }
 
     /// @return restUnlocked EVMOS amount that user can receive
@@ -123,7 +127,7 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     ) private returns (uint256) {
         IVault vault = IVault(lock.vault);
         address account = lock.account;
-        uint256 amount = lock.amount;
+        uint256 amount = shareToAmount(lock.share);
 
         uint256 pendingDebtInBase = vault.pendingDebtShareToAmount(lock.debtShare);
         lock.received = true;
@@ -144,15 +148,15 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         uint256 minRepaid
     ) private {
         lockedQueue = lockedOf[account];
-        uint256 lastUnlocked = lockedQueue.lastUnlocked; 
+        uint256 nextUnlocked = lockedQueue.nextUnlocked; 
         uint256 queueLength = lockedQueue.lockedIds.length;
 
-        if(lastUnlocked == queueLength)   // no unlockable amounts
+        if(nextUnlocked >= queueLength)   // no unlockable amounts
             return;
 
         uint256 unlockable;
         uint256 returnable;
-        uint256 i = lastUnlocked + 1;
+        uint256 i = nextUnlocked;
         
         // assert under 7 loop.
         for (i; i < queueLength; i++) {
@@ -160,7 +164,7 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
             Locked storage lock = locks[lockedId];
             
             if(lock.unlockedAt <= block.timestamp){  /// @dev unlockable
-                unlockable += lock.amount;
+                unlockable += lock.share;
 
                 /// @dev kor) (개선 필요) aggregate하여 repay 횟수 줄이기
                 returnable += _repayPendingDebt(
@@ -172,10 +176,8 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
                 break;
         }
 
-        // if unlockable > 0, i > lastUnlocked
         if(unlockable > 0){
-
-            lockedQueue.lastUnlocked = i;           // 1. reset queue front
+            lockedQueue.nextUnlocked = i + 1;           // 1. reset queue front
             _burn(account, unlockable);
 
             // 3. return EVMOS is returnable exists
@@ -186,6 +188,19 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         }
     }
 
+    /******************
+     * Util Functions *
+    *******************/
+    /// @notice
+    /// 유저는 예치하는 시점에 (예치 금액 / totalAmount) * totalSupply에 해당하는 share를 받음.
+    function amountToShare(uint256 amount) public view returns(uint256) {
+        return (totalAmount == 0) ? amount : (totalSupply * amount) / totalAmount;
+    }
+
+    function shareToAmount(uint256 share) public view returns(uint256) {
+        return (totalSupply == 0) ? share : (totalAmount * share) / totalSupply;
+    }
+
 
     /****************** 
        Core Functions
@@ -194,6 +209,30 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         address account
     ) public view override returns(uint256) {
         return _balances[account];
+    }
+
+    function lockedList(
+        address account
+    ) public view returns(Locked[] memory accountLocks){
+        LockedQueue memory lockedQueue = lockedOf[account];
+        uint256[] memory lockedIds = lockedQueue.lockedIds;
+
+        uint256 queueLength = lockedIds.length;
+        console.log(queueLength);
+        if(queueLength == 0){
+            return new Locked[](0);
+        }
+
+        uint256 first = lockedQueue.nextUnlocked;
+        uint256 length = queueLength - first;
+        accountLocks = new Locked[](length);
+
+        for(uint256 i = 0; i < length ; i++){
+            Locked memory locked = locks[lockedIds[i + first]];
+            accountLocks[i] = locked;
+        }
+
+        return accountLocks;
     }
 
 
@@ -219,7 +258,7 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
             Locked({
                 account: msg.sender,
                 vault: vault,
-                amount: amount,
+                share: amountToShare(amount),
                 debtShare: debtShare,
                 // TODO 개선 필요
                 unlockedAt: (
@@ -254,19 +293,19 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     function getUnlockable(
         address account
     ) public override view returns(uint256 unlockable, uint256 debt) {
-        uint256 lastUnlocked = lockedOf[account].lastUnlocked; 
+        uint256 nextUnlocked = lockedOf[account].nextUnlocked; 
         uint256 queueLength = lockedOf[account].lockedIds.length; 
         uint256[] memory lockedIds = lockedOf[account].lockedIds;
 
-        if(lastUnlocked == queueLength)   // no unlockable amounts
+        if(nextUnlocked == queueLength)   // no unlockable amounts
             return (0, 0);
         
         // TODO assert under 7 loop?
         // kor) 가스비 너무 많이 들게 되면 트랜잭션 실패할듯..
-        for (uint256 i = lastUnlocked + 1; i < queueLength; i++) {
+        for (uint256 i = nextUnlocked; i < queueLength; i++) {
             Locked memory lock = locks[lockedIds[i]];
             if(lock.unlockedAt <= block.timestamp){
-                unlockable += lock.amount;
+                unlockable += lock.share;
 
                 /// @dev kor) (개선 필요) aggregate하여 repay 횟수 줄이기
                 debt += IVault(lock.vault).getPendingDebtInBase(account);
@@ -284,16 +323,18 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         if(lock.unlockedAt > block.timestamp)
             return false;
         uint256 debt = IVault(lock.vault).getPendingDebtInBase(lock.account);
-        return debt >= lock.amount;
+        return debt >= amountToShare(lock.share);
     }
 
     function kill(uint256 lockedId) public override {
         Locked storage lock = locks[lockedId];
         require(lock.unlockedAt <= block.timestamp, "uEVMOS Kill: Cannot Unlock.");
         uint256 debt = IVault(lock.vault).getPendingDebtInBase(lock.account);
-        require(debt >= lock.amount, "uEVMOS Kill: Still safe.");
+
+        uint256 amount = amountToShare(lock.share);
+        require(debt >= amount, "uEVMOS Kill: Still safe.");
         
-        IVault(lock.vault).repayInBase{value: lock.amount}(lock.account, 1);
+        IVault(lock.vault).repayInBase{value: amount}(lock.account, 1);
         lock.received = true;
         /// @dev event Kill?
     }

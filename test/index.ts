@@ -201,13 +201,26 @@ describe('EVMOS Hackathon', async () => {
             const [beforePosVaule, beforeDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
             
             const beforeUEvmos = await uEVMOS.balanceOf(staker1.address);
+            expect(beforeUEvmos).to.equal(0);
+
             await Stayking.connect(staker1).removePosition(tUSDC.address);
             const afterUEvmos = await uEVMOS.balanceOf(staker1.address);
             const [afterPosVaule, afterDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
 
-            expect(afterUEvmos.sub(beforeUEvmos)).to.equal(beforePosVaule);
+            expect(afterUEvmos).to.equal(beforePosVaule);
             expect(afterPosVaule).to.equal(0);
             expect(afterDebtInBase).to.equal(beforeDebtInBase);
+            
+            const uEVMOSTotalAmount = await uEVMOS.totalAmount();
+            const uEVMOSTotalSupply = await uEVMOS.totalSupply();
+            
+            // uEVMOSTotalAmount = beforePosVaule 
+            expect(uEVMOSTotalAmount).to.equal(beforePosVaule);
+            // totalAmount = totalSupply since share:amount = 1:1 
+            expect(uEVMOSTotalSupply).to.equal(uEVMOSTotalAmount);
+
+            const lockedList = await uEVMOS.lockedList(staker1.address);
+            console.log(lockedList)
         })
     })
 })
