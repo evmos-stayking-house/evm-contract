@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { craftform, ethers } from 'hardhat'
+import { craftform, ethers, network } from 'hardhat'
 import { before } from 'mocha'
 import { toBN } from '../scripts/utils'
 import "../crafts"

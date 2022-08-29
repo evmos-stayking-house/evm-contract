@@ -29,7 +29,7 @@ export const deployMockSwap = async (
     if(token0balance.lte(toBN(1, 18))){ // less than 1 ETH
         // add liquidity to swap
         const [whale] = await ethers.getSigners();
-        console.log(`Add liquidity to MockSwap: ${evmos_supply}EVMOS`);
+        // console.log(`Add liquidity to MockSwap: ${evmos_supply}EVMOS`);
         await whale.sendTransaction({
             from: whale.address,
             to: MockSwap.address,
@@ -37,7 +37,7 @@ export const deployMockSwap = async (
         })
         for await (const Token of Tokens) {
             const liquidity = (await Token.balanceOf(deployer.address)).div(2);
-            console.log(`Add liquidity to MockSwap: ${liquidity.toString()}`);
+            // console.log(`Add liquidity to MockSwap: ${liquidity.toString()}`);
             await Token.transfer(MockSwap.address, liquidity);
         }
     }

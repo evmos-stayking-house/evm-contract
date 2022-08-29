@@ -53,9 +53,10 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
     uint256 public minReservedBps;
     uint256 public yesterdayUtilRate;
+    uint256 public lastSavedUtilizationRateTime;
+
     uint256 public override accInterest;
 
-    uint lastSavedUtilizationRateTime;
 
     /*************
      * Modifiers *

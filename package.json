@@ -38,6 +38,7 @@
     "prenode": "rm -rf deployments/localhost && rm -rf configs/localhost",
     "node": "npx hardhat node",
     "test": "rm -rf deployments/hardhat && rm -rf configs/hardhat && npx hardhat test --network hardhat",
+    "test:testnet": "rm -rf deployments/hardhat && rm -rf configs/hardhat && npx hardhat test test/testnet-sweep.ts --network hardhat",
     "deploy:localhost": "npx hardhat run scripts/deploy-local.ts --network localhost",
     "deploy:sooho": "npx hardhat run scripts/deploy-sooho.ts --network sooho",
     "deploy:testnet": "npx hardhat run scripts/deploy-testnet.ts --network testnet"

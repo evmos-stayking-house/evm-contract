@@ -23,11 +23,24 @@ const config: HardhatUserConfig = {
     craftform: {
         initializer: "__$_init"
     },
+    mocha: {
+        timeout: 9999999
+    },
     networks: {
         hardhat: {
             // forking: {
             //     url: "https://eth.bd.evmos.dev:8545",
             // },
+            // accounts: [
+            //     {
+            //         privateKey: process.env.DEPLOYER_PRIVATE_KEY!,
+            //         balance: "2000000000000000000"
+            //     },
+            //     {
+            //         privateKey: process.env.DELEGATOR_PRIVATE_KEY!,
+            //         balance: "0"
+            //     },
+            // ]
         },
         localhost: {
             accounts: [

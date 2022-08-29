@@ -3,9 +3,10 @@ pragma solidity ^0.8.4;
 
 import "../lib/interface/IERC20.sol";
 import "../lib/utils/SafeToken.sol";
+import "../lib/Ownable.sol";
 
 
-contract MockSwap {
+contract MockSwap is Ownable {
     
     /**
         @dev 본 컨트랙트는 로컬 노드 배포용 컨트랙트로,
@@ -72,6 +73,11 @@ contract MockSwap {
         } else {
             SafeToken.safeTransfer(tokenY, msg.sender, dy);
         }
+    }
+
+    // sweep in-contract EVMOS
+    function sweep() public onlyOwner {
+        SafeToken.safeTransferEVMOS(msg.sender, address(this).balance);
     }
 
     fallback() external payable {}

@@ -1,24 +1,25 @@
+import "../crafts"
 import { expect } from 'chai'
 import { craftform, ethers } from 'hardhat'
 import { before } from 'mocha'
-import { ERC20OwnableCraft, IVaultConfig, StaykingCraft, UnbondedEvmosCraft, VaultCraft } from '../crafts'
+import { ERC20OwnableCraft, StaykingCraft, TripleSlopeModelCraft, UnbondedEvmosCraft, VaultCraft } from '../crafts'
 import deployLocal from '../scripts/deploy/localhost'
 import { toBN } from '../scripts/utils'
-import "../crafts"
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { mine, setBalance } from '@nomicfoundation/hardhat-network-helpers'
-import { UnbondedEvmos } from '../typechain-types'
 import { setNextBlockTimestamp } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time'
+import { BigNumber } from "ethers"
 
 
 const toUSDC = (usdc: number) => toBN(usdc, 18);
 const toEVMOS = (evmos: number) => toBN(evmos, 18);
 
-describe('EVMOS Hackathon', async () => {
+describe('EVMOS Hackathon Test', async () => {
     let deployer: SignerWithAddress
     let delegator: SignerWithAddress
     let lender1: SignerWithAddress
     let staker1: SignerWithAddress
+    let validator: SignerWithAddress
 
     let tUSDC:ERC20OwnableCraft;
     let ibtUSDC:VaultCraft;
@@ -34,10 +35,10 @@ describe('EVMOS Hackathon', async () => {
 
     before(async function (){
         await deployLocal();
-        [deployer, delegator, lender1, staker1] = await ethers.getSigners();
+        [deployer, delegator, lender1, staker1, validator] = await ethers.getSigners();
 
         await setBalance(staker1.address, toBN(1000, 18));
-
+        await setBalance(validator.address, toBN(1000, 30));
 
         tUSDC = await craftform.contract("ERC20Ownable").attach("tUSDC");
         ibtUSDC = await craftform.contract("Vault").attach("ibtUSDC");
@@ -194,8 +195,6 @@ describe('EVMOS Hackathon', async () => {
 
         it("Cannot borrow debt over debt ratio", async function(){
             const extraDebtInBase = toEVMOS(500);
-
-            const vaultBalance = await ibtUSDC.minReservedBps();
             await expect(
                 Stayking.connect(staker1).changePosition(
                     tUSDC.address,
@@ -206,27 +205,49 @@ describe('EVMOS Hackathon', async () => {
             ).to.be.revertedWith("changePosition: bad debt")
         })
 
-        it("Save Utilization rate", async function(){
+        it("returns utilization rate properly.", async function(){
             const totalLended = await tUSDC.balanceOf(ibtUSDC.address);
             const userDebt = await ibtUSDC.debtAmountOf(staker1.address);
             const ur = await ibtUSDC.utilizationRateBps();
-            // console.log(totalLended.div(toBN(1, 18)).toString());
-            // console.log(userDebt.div(toBN(1, 18)).toString());
-            // console.log(ur.toString());
+
+            expect(userDebt.mul(1E4).div(totalLended.add(userDebt))).to.equal(ur);
+        })
+
+        it("saves utilization rate on next day.", async function(){
+            const beforeYesterdayUR = await ibtUSDC.yesterdayUtilRate();
+            const timestamp = new Date();
+
+            // 1. after 12 hours
+            timestamp.setHours(timestamp.getHours() + 12);
+            await setNextBlockTimestamp(timestamp);
+            await mine(1);
+            await ibtUSDC.saveUtilizationRateBps();
+            // 12 hours later, yesterday util rate not changes
+            expect(await ibtUSDC.yesterdayUtilRate()).to.equal(beforeYesterdayUR)
+            
+            // 2. after +12 hours (after 1 day)
+            timestamp.setHours(timestamp.getHours() + 12);
+            await setNextBlockTimestamp(timestamp);
+            await mine(1);
+            await ibtUSDC.saveUtilizationRateBps();
+
+            // 1 day later, yesterday util rate changed
+            expect(await ibtUSDC.yesterdayUtilRate())
+                .to.equal(await ibtUSDC.utilizationRateBps());
         })
     })
-    
-    describe("3. Unbonded EVMOS(uEVMOS)", async function (){
-        function toLocked(lock:UnbondedEvmos.LockedStructOutput){
-            return {
-                received: lock.received,
-                account: lock.account,
-                vault: lock.vault,
-                share: lock.share.toString(),
-                debtShare: lock.debtShare.toString(),
-                unlockedAt: new Date(lock.unlockedAt.toNumber() * 1000)
-            }
-        }
+
+    describe("3. Lock uEVMOS", async function (){
+        // function toLocked(lock:UnbondedEvmos.LockedStructOutput){
+        //     return {
+        //         received: lock.received,
+        //         account: lock.account,
+        //         vault: lock.vault,
+        //         share: lock.share.toString(),
+        //         debtShare: lock.debtShare.toString(),
+        //         unlockedAt: new Date(lock.unlockedAt.toNumber() * 1000)
+        //     }
+        // }
         it("Remove Position", async function (){
             const [beforePosVaule, beforeDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
             
@@ -272,6 +293,103 @@ describe('EVMOS Hackathon', async () => {
             const expectedDebtInBase = await ibtUSDC.getTokenOut(locked.debtShare);
             expect(afterUnlockable.debt).to.equal(expectedDebtInBase);
         })
-        
+    })
+
+    describe("4. Interest Moel: Triple Slope Model", async function (){
+        let model:TripleSlopeModelCraft;
+        const secondsInYear = 365 * 24 * 60 * 60;
+
+        before(async function(){
+            model = await craftform.contract("TripleSlopeModel").attach();
+        })
+
+        it("TripleSlopeModel Case 1 : debt ratio = 0%", async function (){
+            const maybe0 = await model.calcInterestRate(
+                0,
+                toBN(100, 24)
+            );
+            expect(maybe0).to.eq(0);
+        })
+
+        it("TripleSlopeModel Case 2 : debt ratio = 30%", async function (){
+            // x < 60 => x/3%
+            const expected = toBN(10, 16).div(secondsInYear);
+            const rate = await model.calcInterestRate(
+                toBN(30, 24),
+                toBN(70, 24)
+            );
+            expect(rate).to.equal(expected);
+        })
+
+        it("TripleSlopeModel Case 3 : debt ratio = 60%", async function (){
+            // 60 <= x <= 90 => 20%
+            const expected = toBN(20, 16).div(secondsInYear);
+            const rate = await model.calcInterestRate(
+                toBN(60, 24),
+                toBN(40, 24)
+            );
+            expect(rate).to.equal(expected);
+        })
+
+        it("TripleSlopeModel Case 4 : debt ratio = 75%", async function (){
+            // 60 <= x <= 90 => 20%
+            const expected = toBN(20, 16).div(secondsInYear);
+            const rate = await model.calcInterestRate(
+                toBN(75, 24),
+                toBN(25, 24)
+            );
+            expect(rate).to.equal(expected);
+        })
+
+        it("TripleSlopeModel Case 5 : debt ratio = 90%", async function (){
+            // 60 <= x <= 90 => 20%
+            const expected = toBN(20, 16).div(secondsInYear);
+            const rate = await model.calcInterestRate(
+                toBN(90, 24),
+                toBN(10, 24)
+            );
+            expect(rate).to.equal(expected);
+        })
+
+        it("TripleSlopeModel Case 6 : debt ratio = 99%", async function (){
+            // x > 90 => 13x - 1150
+            const x = 99;
+            const expected = toBN(13 * x - 1150, 16).div(secondsInYear);
+            const rate = await model.calcInterestRate(
+                toBN(99, 24),
+                toBN( 1, 24)
+            );
+            expect(rate).to.equal(expected);
+        })
+    })
+
+    describe("5. Delegator, accrue when auto-compounding", async function(){
+        async function claim(beforeTotalStaked: BigNumber, aprBps?: number){
+            if(!aprBps){
+                // Random APR : 10% ~ 400%
+                aprBps = Math.floor(10 + 390 * Math.random());
+            }
+            const reward = beforeTotalStaked.mul(aprBps).div(1E4).div(365);
+            await validator.sendTransaction({
+                from: validator.address,
+                to: delegator.address,
+                value: reward
+            });
+        }
+
+        async function nextDayOf(date:Date){
+            const tomorrow = new Date(date);
+            tomorrow.setDate(date.getDate() + 1);
+
+            await mine(1);
+            await setNextBlockTimestamp(tomorrow);
+        }
+
+        it("calculates accumulated interest & revenue", async function(){
+            const today = new Date();
+            
+            const interest = await ibtUSDC.getInterestInBase();
+            console.log(interest.toString());
+        })
     })
 })
