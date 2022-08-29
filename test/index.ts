@@ -6,7 +6,9 @@ import deployLocal from '../scripts/deploy/localhost'
 import { toBN } from '../scripts/utils'
 import "../crafts"
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
+import { mine, setBalance } from '@nomicfoundation/hardhat-network-helpers'
+import { UnbondedEvmos } from '../typechain-types'
+import { setNextBlockTimestamp } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time'
 
 
 const toUSDC = (usdc: number) => toBN(usdc, 18);
@@ -103,7 +105,7 @@ describe('EVMOS Hackathon', async () => {
     
     })
     
-    describe("2. Stayking:: Add/Adjust position", async function () {
+    describe("2. Stayking:: Add/Change position", async function () {
         it("First add position (leverage x3)", async function (){    
             const leverage = 3;
             const equity = toEVMOS(100);
@@ -111,6 +113,7 @@ describe('EVMOS Hackathon', async () => {
 
             const beforeEVMOS = await staker1.getBalance();
             await tUSDC.connect(staker1).approve(ibtUSDC.address, equity);
+            // debt: 200 EVMOS = 400 USDC
             await Stayking.connect(staker1).addPosition(
                 tUSDC.address,
                 equity,
@@ -167,6 +170,7 @@ describe('EVMOS Hackathon', async () => {
             const [beforePosVaule, beforeDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
             const beforeTotalStaked = await delegator.getBalance();
             
+            // debt: 200 EVMOS + 50 EVMOS = 400 USDC + 100 USDC = 500USDC
             await Stayking.connect(staker1).changePosition(
                 tUSDC.address,
                 0,
@@ -176,41 +180,73 @@ describe('EVMOS Hackathon', async () => {
             const [afterPosVaule, afterDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
                 
             // position value should be increased
-            expect(afterPosVaule.sub(beforePosVaule)).to.equal(extraDebtInBase, "Position value not increased properly");
+            expect(afterPosVaule.sub(beforePosVaule))
+                .to.equal(extraDebtInBase, "Position value not increased properly");
             // debt should be increased
-            expect(afterDebtInBase.sub(beforeDebtInBase)).to.equal(extraDebtInBase, "Debt value not increased properly");
+            expect(afterDebtInBase.sub(beforeDebtInBase))
+                .to.equal(extraDebtInBase, "Debt value not increased properly");
 
             expect(await ethers.provider.getBalance(Stayking.address)).to.equal(0);
             const afterTotalStaked = await delegator.getBalance();
-            expect(afterTotalStaked.sub(beforeTotalStaked)).to.equal(extraDebtInBase);
+            expect(afterTotalStaked.sub(beforeTotalStaked))
+                .to.equal(extraDebtInBase);
         })
 
         it("Cannot borrow debt over debt ratio", async function(){
             const extraDebtInBase = toEVMOS(500);
-            expect(
+
+            const vaultBalance = await ibtUSDC.minReservedBps();
+            await expect(
                 Stayking.connect(staker1).changePosition(
                     tUSDC.address,
                     0,
                     extraDebtInBase,
                     0
                 )
-            ).to.be.revertedWith("Loan: Cant' loan debt anymore.")
+            ).to.be.revertedWith("changePosition: bad debt")
         })
 
+        it("Save Utilization rate", async function(){
+            const totalLended = await tUSDC.balanceOf(ibtUSDC.address);
+            const userDebt = await ibtUSDC.debtAmountOf(staker1.address);
+            const ur = await ibtUSDC.utilizationRateBps();
+            // console.log(totalLended.div(toBN(1, 18)).toString());
+            // console.log(userDebt.div(toBN(1, 18)).toString());
+            // console.log(ur.toString());
+        })
+    })
+    
+    describe("3. Unbonded EVMOS(uEVMOS)", async function (){
+        function toLocked(lock:UnbondedEvmos.LockedStructOutput){
+            return {
+                received: lock.received,
+                account: lock.account,
+                vault: lock.vault,
+                share: lock.share.toString(),
+                debtShare: lock.debtShare.toString(),
+                unlockedAt: new Date(lock.unlockedAt.toNumber() * 1000)
+            }
+        }
         it("Remove Position", async function (){
             const [beforePosVaule, beforeDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
             
             const beforeUEvmos = await uEVMOS.balanceOf(staker1.address);
             expect(beforeUEvmos).to.equal(0);
-
+            
+            /**
+             * Stayking check
+             */
             await Stayking.connect(staker1).removePosition(tUSDC.address);
             const afterUEvmos = await uEVMOS.balanceOf(staker1.address);
             const [afterPosVaule, afterDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
-
+    
             expect(afterUEvmos).to.equal(beforePosVaule);
             expect(afterPosVaule).to.equal(0);
             expect(afterDebtInBase).to.equal(beforeDebtInBase);
             
+            /**
+             * uEVMOS check
+             */
             const uEVMOSTotalAmount = await uEVMOS.totalAmount();
             const uEVMOSTotalSupply = await uEVMOS.totalSupply();
             
@@ -219,8 +255,23 @@ describe('EVMOS Hackathon', async () => {
             // totalAmount = totalSupply since share:amount = 1:1 
             expect(uEVMOSTotalSupply).to.equal(uEVMOSTotalAmount);
 
-            const lockedList = await uEVMOS.lockedList(staker1.address);
-            console.log(lockedList)
         })
+
+        it("should unlock after 14(+2) days", async function(){
+            const beforeUnlockable = await uEVMOS.getUnlockable(staker1.address);
+            expect(beforeUnlockable.unlockable).to.equal(0);
+            expect(beforeUnlockable.debt).to.equal(0);
+            const [ locked ] = await uEVMOS.lockedList(staker1.address);
+
+            await setNextBlockTimestamp(locked.unlockedAt);
+            await mine(1);
+
+            const afterUnlockable = await uEVMOS.getUnlockable(staker1.address);
+            expect(afterUnlockable.unlockable).to.equal(locked.share);
+
+            const expectedDebtInBase = await ibtUSDC.getTokenOut(locked.debtShare);
+            expect(afterUnlockable.debt).to.equal(expectedDebtInBase);
+        })
+        
     })
 })

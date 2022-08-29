@@ -276,8 +276,9 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         debt = _swapToBase(debtInBase);
         debtAmountOf[user] += debt;
         totalDebtAmount += debt;
+
         require(
-            totalDebtAmount * 1E4 <= totalAmount() * minReservedBps,
+            totalDebtAmount * 1E4 <= totalAmount() * (1E4 - minReservedBps),
             "Loan: Cant' loan debt anymore."
         );
 

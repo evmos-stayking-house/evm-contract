@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
+import "hardhat/console.sol";
 import "../interface/IStayking.sol";
 import "../interface/IVault.sol";
 import "../interface/ISwapHelper.sol";
@@ -522,6 +523,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 debtInBaseChanged < 0 ? uint256(-debtInBaseChanged) : 0
             );
         }
+
+        uint256 debtAmount = debtAmountOf(msg.sender, vault);
+        (bool healthy, ) = _isHealthy(vault, p.share, debtAmount);
+        require(healthy, "changePosition: bad debt");
 
         emit PositionChanged(
             msg.sender,

@@ -218,7 +218,6 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         uint256[] memory lockedIds = lockedQueue.lockedIds;
 
         uint256 queueLength = lockedIds.length;
-        console.log(queueLength);
         if(queueLength == 0){
             return new Locked[](0);
         }
