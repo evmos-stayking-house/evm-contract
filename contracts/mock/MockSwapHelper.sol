@@ -37,12 +37,13 @@ contract MockSwapHelper is ISwapHelper {
     ) public payable override returns (uint256 dy){
         if(tokenX == address(0)){
             require(msg.value == dx, "MockSwap: msg.value != dx");
+            dy = swap.exchange{value: dx}(tokenX, tokenY, dx, minDy);
         } else {
             SafeToken.safeTransferFrom(tokenX, msg.sender, address(this), dx);
+            SafeToken.safeApprove(tokenX, address(swap), dx);
+            dy = swap.exchange(tokenX, tokenY, dx, minDy);
         }
 
-        SafeToken.safeApprove(tokenX, address(swap), dx);
-        dy = swap.exchange(tokenX, tokenY, dx, minDy);
 
         if(tokenY == address(0)){
             SafeToken.safeTransferEVMOS(msg.sender, dy);
