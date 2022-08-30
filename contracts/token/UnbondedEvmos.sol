@@ -115,10 +115,9 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         require(account != address(0), "uEVMOS: burn from the zero address");
         uint256 amount = shareToAmount(share);
 
-        uint256 accountBalance = _balances[account];
-        require(accountBalance >= amount, "uEVMOS: burn amount exceeds balance");
+        require(_balances[account] >= amount, "uEVMOS: burn amount exceeds balance");
         unchecked {
-            _balances[account] = accountBalance - amount;
+            _balances[account] -= amount;
         }
 
         totalSupply -= share;

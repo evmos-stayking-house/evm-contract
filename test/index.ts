@@ -33,6 +33,21 @@ describe('EVMOS Hackathon Test', async () => {
         return [usdc, ibUsdc]
     }
 
+    async function timeTravel(seconds: number){
+        const lastBlockNumber = await latestBlock();
+        const block = await ethers.provider.getBlock(lastBlockNumber);
+        const destination = new Date((block.timestamp + seconds) * 1000);
+        await mine(1);
+        await setNextBlockTimestamp(destination);
+        return destination;
+    }
+    async function toNextDay(){
+        return timeTravel(86400);
+    }
+    async function toNextHour(){
+        return timeTravel(3600);
+    }
+
     before(async function (){
         await deployLocal();
         [deployer, delegator, lender1, staker1, validator] = await ethers.getSigners();
@@ -64,7 +79,6 @@ describe('EVMOS Hackathon Test', async () => {
              */
             
             const depositAmount = toUSDC(5);
-    
             // Step 0 balance status
             const [step0Amount, step0Share] = await getBalances(lender1.address);
     
@@ -98,7 +112,7 @@ describe('EVMOS Hackathon Test', async () => {
             expect(step3Share.sub(step2Share)).eq(liquidity);
         })
 
-        it("Interest should be ZERO.", async function (){            
+        it("Interest should be ZERO.", async function (){
             const ir = await ibtUSDC.getInterestRate();
             // interest rate should be 0 (since total debt: 0)
             expect(ir).eq(0)
@@ -138,6 +152,32 @@ describe('EVMOS Hackathon Test', async () => {
             expect(await ethers.provider.getBalance(ibtUSDC.address)).to.equal(0);
             expect(await ethers.provider.getBalance(Stayking.address)).to.equal(0);
             expect(await delegator.getBalance()).to.equal(positionValueInBase);
+
+        })
+
+        it("accrued interest on next day is valid", async function (){
+            // before interest : approximately 0
+            const beforeAccInterest = await ibtUSDC.accInterest();
+            expect(beforeAccInterest).to.approximately(0, 100000);
+            
+            await toNextDay();
+            await ibtUSDC.accrue();
+
+            // maybe 4E18
+            const totalDebt = await ibtUSDC.totalDebtAmount();
+
+            // maybe 400 (4%)
+            const ur = await ibtUSDC.utilizationRateBps();
+
+            // expected interest = (1E18 / 365) x * 1E14 * (x/3) / 365
+            const expectedIR = toBN(1, 18).mul(ur).div(1E4).div(3).div(365 * 86400);
+            const ir = await ibtUSDC.getInterestRate();
+            expect(ir).to.equal(expectedIR);
+
+            // => x/3 : interest rate
+            const expected = expectedIR.mul(totalDebt).mul(86400).div(toBN(1, 18));
+            const afterAccInterest = await ibtUSDC.accInterest();
+            expect(afterAccInterest).to.equal(expected);
         })
 
         it("Add Equity", async function(){
@@ -215,20 +255,15 @@ describe('EVMOS Hackathon Test', async () => {
 
         it("saves utilization rate on next day.", async function(){
             const beforeYesterdayUR = await ibtUSDC.yesterdayUtilRate();
-            const timestamp = new Date();
 
-            // 1. after 12 hours
-            timestamp.setHours(timestamp.getHours() + 12);
-            await setNextBlockTimestamp(timestamp);
-            await mine(1);
+            // 1. after 1 hour
+            await toNextHour()
             await ibtUSDC.saveUtilizationRateBps();
-            // 12 hours later, yesterday util rate not changes
+            // 1 hour later, yesterday util rate not changes
             expect(await ibtUSDC.yesterdayUtilRate()).to.equal(beforeYesterdayUR)
             
             // 2. after +12 hours (after 1 day)
-            timestamp.setHours(timestamp.getHours() + 12);
-            await setNextBlockTimestamp(timestamp);
-            await mine(1);
+            await timeTravel(43200);
             await ibtUSDC.saveUtilizationRateBps();
 
             // 1 day later, yesterday util rate changed
@@ -417,25 +452,11 @@ describe('EVMOS Hackathon Test', async () => {
             });
         }
 
-        async function nextDayOf(date:Date){
-            const tomorrow = new Date(date);
-            tomorrow.setDate(date.getDate() + 1);
-
-            await mine(1);
-            await setNextBlockTimestamp(tomorrow);
-            return tomorrow;
-        }
-
         it("accrues interest to vault properly.", async function(){
-            const lastBlockNumber = await latestBlock();
-            const block = await ethers.provider.getBlock(lastBlockNumber);
-
-            const today = new Date((block.timestamp + 60) * 1000);
-            
             const interest = await ibtUSDC.getInterestInBase();
             const beforeAccInterest = await ibtUSDC.accInterest();
 
-            const day1 = await nextDayOf(today);
+            const day1 = await toNextDay();
             await ibtUSDC.saveUtilizationRateBps();
 
             const afterAccInterest = await ibtUSDC.accInterest();

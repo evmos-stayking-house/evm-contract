@@ -190,16 +190,20 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     function _accrue() private {
         if (block.timestamp <= lastAccruedAt) 
             return;
-
         uint256 timePast = block.timestamp - lastAccruedAt;
 
         /// @dev get interest rate by utilization rate
-        uint256 interest = (getInterestRate() * totalDebtAmount * timePast) / DENOM;
+        uint256 interest = (getInterestRate() * (totalDebtAmount + accInterest) * timePast) 
+            / DENOM;
 
         accInterest += interest;
         lastAccruedAt = block.timestamp;
     }
 
+    /// @dev for test -> should be REMOVED
+    function accrue () public {
+        _accrue();
+    }
     /******************
      * Swap Functions *
     *******************/
