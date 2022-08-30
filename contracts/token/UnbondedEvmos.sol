@@ -25,7 +25,7 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     uint256 public override lastUnbondedAt;
     uint256 public override unbondingInterval;   // maybe 14 + 2 days
 
-    uint256 public totalAmount;
+    uint256 public override totalAmount;
     uint256 public override totalSupply;
 
     /// @dev unbondLimit?
@@ -91,29 +91,13 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         emit UpdateConfigs(_unbondingInterval);
     }
 
-    /*******************
-      Private functions
-    ********************/
-    function amountToShare(
-        uint256 amount
-    ) public view returns(uint256) {
-        return (totalAmount == 0) ? amount :
-            totalSupply * amount / totalAmount;
-    }
-
-    function shareToAmount(
-        uint256 share
-    ) public view returns(uint256) {
-        return (totalSupply == 0) ? share :
-            totalAmount * share / totalSupply;
-    }
 
     /*******************
       Private functions
     ********************/
     function _mint(
         address account,
-        uint256 share
+        uint256 amount
     ) private{
         require(account != address(0), "uEVMOS: mint to the zero address");
         uint256 share = amountToShare(amount);
@@ -276,7 +260,6 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
 
         /// @dev limit queue size?
         // require(lockedQueue.rear - lockedQueue.front < unbondLimit, "mintLockedToken: unbond limit exceeded." );
-        uint256 share = amountToShare(amount);
         locks.push(
             Locked({
                 account: msg.sender,
