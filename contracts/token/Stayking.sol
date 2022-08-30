@@ -95,8 +95,8 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         // @TODO policy
         updateConfigs(
-            10e18,  // minDebtInBase (10EVMOS)
-            8000,    // killFactorBps
+            1e16,  // minDebtInBase (10EVMOS)
+            7500,    // killFactorBps
             3000     // reservedBps
         );
 
@@ -189,21 +189,31 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
      @param p           Position
      @param vault       owed by the user
      @param amount      unstaked amount
-     @param repaidDebtInBase  repaid amount in EVMOS ( repaidDebt <= amount = shareToAmount(amount) )
+     @param repaidDebt  repaid amount in token
+     
+     @notice
+     kor) Unstake할 때, 가격변동 + 대출이자로 인해 빚이 늘어나는 것에 대비하여
+     자기자본도 일부 unstake해야 한다.
+     TODO 그 기준은 일단 killFactor로 한다.
      */
     function _unstake(
         Position storage p,
         address vault,
         uint256 amount,
-        uint256 repaidDebtInBase
+        uint256 repaidDebt
     ) private {
-        require(repaidDebtInBase <= amount, "unstake: repaidDebtInBase > unstaked amount");
+        uint256 debtInBaseUnstaked = IVault(vault).getBaseIn(repaidDebt);
+        require(
+            debtInBaseUnstaked * 1E4 <= amount * killFactorBps,
+            "unstake: too much debt in unstaked EVMOS"
+        );
+
         uint256 share = amountToShare(amount);
         p.share -= share;
         totalAmount -= amount;
         totalShare -= share;
 
-        uint256 pendingDebtShare = IVault(vault).pendRepay(p.user, repaidDebtInBase);
+        uint256 pendingDebtShare = IVault(vault).pendRepay(p.user, repaidDebt);
 
         uEVMOS.mintLockedToken(
             p.user,
@@ -219,9 +229,9 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         Position storage p,
         address vault
     ) private returns(uint256 amount){
-        uint256 debtInBase = IVault(vault).debtAmountInBase(p.user);
+        uint256 debt = IVault(vault).debtAmountOf(p.user);
         amount = shareToAmount(p.share);
-        _unstake(p, vault, shareToAmount(p.share), debtInBase);
+        _unstake(p, vault, amount, debt);
     }
 
     function _isHealthy(
@@ -444,26 +454,31 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     /** @notice change position value
-        case 1. changeEquityInBase > 0 
+        case 1. equityInBaseChanged > 0 
             - increase position value (call _stake function)
             - decrease debt ratio
-        case 2. changeEquityInBase < 0 
+        case 2. equityInBaseChanged < 0 
             - decrease position value (call _unstake function)
             - increase debt ratio
-        case 3. changeDebt > 0 (borrow more debt)
+        case 3. debtInBaseChanged > 0 (borrow more debt)
             - increase position value (call _stake function)
             - increase debt ratio
-        case 4. changeEquity < 0 (repay debt by unstaking)
+        case 4. debtInBaseChanged < 0 (repay debt by unstaking)
             - decrease position value (call _unstake function)
             - decrease debt ratio
-        case 5. repayDebt > 0 (repay debt with user's own token) 
-                or msg.value > 0 (repay debt with user's own EVMOS)
-                @dev (msg.value - changeEquityInBase) equals to repayDebtInBase
+        case 5. repaidDebt > 0 or repaidDebtInBase > 0 (repay debt with user's own token/EVMOS) 
             - position value not changes (not call _stake/_unstake function)
             - decrease debt ratio
+        @dev repayDebtInBase = msg.value - changeEquityInBase
         @dev User should approve this first
         @dev if msg.value > 0, changeEquityInBase >= 0
              since msg.value = changeEquityInBase + repayDebtInBase
+        @notice 
+        If equityInBaseChanged > 0 and debtInBaseChanged < 0, it is inefficient.
+            e.g. A = 100 and B = -50, it produces the same result as if A = 50 and C = 50.
+        (both increases equity by 50 EVMOS and repay debt by 50 EVMOS)
+        However, former case requires more gas.
+        Similarly, the case where equityInBaseChanged < 0 and debtInBaseChanged > 0 are also inefficient.
      */
     function changePosition(
         address debtToken,
@@ -520,7 +535,9 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 p,
                 vault,
                 unstakedAmount - stakedAmount,
-                debtInBaseChanged < 0 ? uint256(-debtInBaseChanged) : 0
+                debtInBaseChanged < 0 ? 
+                    IVault(vault).getTokenOut(uint256(-debtInBaseChanged))
+                    : 0
             );
         }
 

@@ -17,7 +17,7 @@ export const deployuEVMOS = (deployer: SignerWithAddress) => {
                             args: [unbondingInterval]
                         }
                     }
-                }
+                },
             }
         )
 }

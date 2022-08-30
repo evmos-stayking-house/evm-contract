@@ -20,6 +20,7 @@ import "../lib/utils/SafeToken.sol";
 contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
     address private constant BASE_TOKEN = address(0);
+    uint256 private constant DENOM = 1E18;
 
     event Deposit(address user, uint256 amount, uint256 share);
     event Withdraw(address user, uint256 amount, uint256 share);
@@ -55,6 +56,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     uint256 public yesterdayUtilRate;
     uint256 public lastSavedUtilizationRateTime;
 
+    uint256 public lastAccruedAt;
     uint256 public override accInterest;
 
 
@@ -68,6 +70,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     }
 
     modifier saveUtilRate() {
+        _accrue();
         _;
         saveUtilizationRateBps();
     }
@@ -93,6 +96,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
         token = _token;
         stayking = _stayking;
+        lastAccruedAt = block.timestamp;
         updateMinReservedBps(_minReservedBps);
         updateInterestModel(_interestModel);
         updateSwapHelper(_swapHelper);
@@ -104,7 +108,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
     // @dev (token in vault) + (debt)
     function totalAmount() public override view returns(uint256){
-        return IERC20(token).balanceOf(address(this)) + totalDebtAmount;
+        return IERC20(token).balanceOf(address(this)) + totalDebtAmount + totalPendingDebtAmount;
     }
 
     function updateMinReservedBps(uint256 _minReservedBps) public override onlyOwner {
@@ -159,24 +163,42 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     function getInterestRate() public override view returns(uint256 interestRate){
         interestRate = IInterestModel(interestModel)
             .calcInterestRate(
-                totalDebtAmount,
+                totalDebtAmount + totalPendingDebtAmount,
                 IERC20(token).balanceOf(address(this))
             );
     }
 
     function utilizationRateBps() public override view returns(uint256){
-        return 1E4 * totalDebtAmount / totalAmount();
+        return 1E4 * (totalDebtAmount + totalPendingDebtAmount) / totalAmount();
     }
 
     function saveUtilizationRateBps() public override {
         if (block.timestamp >= lastSavedUtilizationRateTime + 1 days) {
             yesterdayUtilRate = utilizationRateBps();
             lastSavedUtilizationRateTime += 1 days;
-            accInterest += (totalDebtAmount * getInterestRate() / 1E18 / 365);
+            // accInterest += getInterestRate() * 86400;
             emit UtilizationRate(yesterdayUtilRate);
         }
     }
 
+    /**
+        @dev 
+        Before each time the position is changed, 
+        the interest on "Stayking debt" (not on "pending debt")
+        during (lastAccruedAt ~ present) is calculated and added.
+     */
+    function _accrue() private {
+        if (block.timestamp <= lastAccruedAt) 
+            return;
+
+        uint256 timePast = block.timestamp - lastAccruedAt;
+
+        /// @dev get interest rate by utilization rate
+        uint256 interest = (getInterestRate() * totalDebtAmount * timePast) / DENOM;
+
+        accInterest += interest;
+        lastAccruedAt = block.timestamp;
+    }
 
     /******************
      * Swap Functions *
@@ -279,7 +301,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         totalDebtAmount += debt;
 
         require(
-            totalDebtAmount * 1E4 <= totalAmount() * (1E4 - minReservedBps),
+            (totalDebtAmount + totalPendingDebtAmount) * 1E4 <= totalAmount() * (1E4 - minReservedBps),
             "Loan: Cant' loan debt anymore."
         );
 
@@ -362,10 +384,15 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     /// Stayking should approve token first.
     function pendRepay(
         address user,
-        uint256 amountInBase
+        uint256 amount
     ) public override onlyStayking returns(uint256 pendingDebtShare) {
-        uint256 amount = getTokenOut(amountInBase);
         require(amount <= debtAmountOf[user], "pendRepay: too much amount to repay.");
+        /// @dev subtract from debtAmountOf[user]
+        totalDebtAmount - amount;
+        debtAmountOf[user] -= amount;
+
+        /// @dev The pendingDebtAmount increases over time. 
+        /// This is because lending interest is charged during the 14 days of unbonding.
         pendingDebtShare = pendingDebtAmountToShare(amount);
         pendingDebtShareOf[user] += pendingDebtShare;
         totalPendingDebtShare += pendingDebtShare;

@@ -7,7 +7,7 @@ import deployLocal from '../scripts/deploy/localhost'
 import { toBN } from '../scripts/utils'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { mine, setBalance } from '@nomicfoundation/hardhat-network-helpers'
-import { setNextBlockTimestamp } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time'
+import { latestBlock, setNextBlockTimestamp } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time'
 import { BigNumber } from "ethers"
 
 
@@ -260,11 +260,13 @@ describe('EVMOS Hackathon Test', async () => {
             await Stayking.connect(staker1).removePosition(tUSDC.address);
             const afterUEvmos = await uEVMOS.balanceOf(staker1.address);
             const [afterPosVaule, afterDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
+            const pendingDebt = await ibtUSDC.getPendingDebtInBase(staker1.address);
     
             expect(afterUEvmos).to.equal(beforePosVaule);
             expect(afterPosVaule).to.equal(0);
-            expect(afterDebtInBase).to.equal(beforeDebtInBase);
-            
+            expect(afterDebtInBase).to.equal(0);    // debt: 0 / pendingDebt = real debt
+            expect(pendingDebt).to.equal(beforeDebtInBase);
+
             /**
              * uEVMOS check
              */
@@ -295,7 +297,45 @@ describe('EVMOS Hackathon Test', async () => {
         })
     })
 
-    describe("4. Interest Moel: Triple Slope Model", async function (){
+    describe("4. Add/Handle position after first time", async function (){
+        it("Re-add position (x3 leverage)", async function(){
+            const leverage = 3;
+            const equity = toEVMOS(100);
+            const debtInBase = equity.mul(leverage - 1);
+
+            const beforeEVMOS = await staker1.getBalance();
+            const beforeDelegatorBalance = await delegator.getBalance();
+
+            await tUSDC.connect(staker1).approve(ibtUSDC.address, equity);
+            // debt: 200 EVMOS = 400 USDC
+            await Stayking.connect(staker1).addPosition(
+                tUSDC.address,
+                equity,
+                debtInBase,
+                {value: equity}
+            );
+            const afterEVMOS = await staker1.getBalance();
+
+            expect(beforeEVMOS.sub(afterEVMOS)).to.approximately(equity, toBN(1, 16));
+            
+            const positionId = await Stayking.positionIdOf(staker1.address, ibtUSDC.address);
+            expect(positionId).to.eq(2);
+            const [positionValueInBase, positionDebtInBase, debt] = await Stayking.positionInfo(staker1.address, tUSDC.address);
+
+            // equity in position
+            expect(positionValueInBase.sub(positionDebtInBase)).to.equal(equity);
+            // debt in EVMOS in posittion
+            expect(positionDebtInBase).to.equal(debtInBase);
+            expect(await ibtUSDC.getBaseIn(debt)).to.equal(debtInBase);
+
+            expect(await ethers.provider.getBalance(ibtUSDC.address)).to.equal(0);
+            expect(await ethers.provider.getBalance(Stayking.address)).to.equal(0);
+            expect(await delegator.getBalance(), "delegator value = delegator balance + this position value")
+                .to.equal(beforeDelegatorBalance.add(positionValueInBase));
+        })
+    })
+
+    describe("5. Interest Moel: Triple Slope Model", async function (){
         let model:TripleSlopeModelCraft;
         const secondsInYear = 365 * 24 * 60 * 60;
 
@@ -363,7 +403,7 @@ describe('EVMOS Hackathon Test', async () => {
         })
     })
 
-    describe("5. Delegator, accrue when auto-compounding", async function(){
+    describe("6. Delegator, accrue when auto-compounding", async function(){
         async function claim(beforeTotalStaked: BigNumber, aprBps?: number){
             if(!aprBps){
                 // Random APR : 10% ~ 400%
@@ -383,13 +423,29 @@ describe('EVMOS Hackathon Test', async () => {
 
             await mine(1);
             await setNextBlockTimestamp(tomorrow);
+            return tomorrow;
         }
 
-        it("calculates accumulated interest & revenue", async function(){
-            const today = new Date();
+        it("accrues interest to vault properly.", async function(){
+            const lastBlockNumber = await latestBlock();
+            const block = await ethers.provider.getBlock(lastBlockNumber);
+
+            const today = new Date((block.timestamp + 60) * 1000);
             
             const interest = await ibtUSDC.getInterestInBase();
-            console.log(interest.toString());
+            const beforeAccInterest = await ibtUSDC.accInterest();
+
+            const day1 = await nextDayOf(today);
+            await ibtUSDC.saveUtilizationRateBps();
+
+            const afterAccInterest = await ibtUSDC.accInterest();
+            const interest2 = await ibtUSDC.getInterestInBase();
+
+            console.log(interest.div(toBN(1,18)).toString())
+            console.log(interest2.div(toBN(1,18)).toString())
+            console.log((await ibtUSDC.getInterestRate()).toString())
+
+            // expect(afterAccInterest.sub(beforeAccInterest)).to.equal(interest2);
         })
     })
 })
