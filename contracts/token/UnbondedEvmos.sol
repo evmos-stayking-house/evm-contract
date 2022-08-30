@@ -72,6 +72,10 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         _;
     }
 
+    /*******************
+      Private functions
+    ********************/
+
     function updateMinterStatus(
         address account,
         bool status
@@ -90,9 +94,26 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     /*******************
       Private functions
     ********************/
+    function amountToShare(
+        uint256 amount
+    ) public view returns(uint256) {
+        return (totalAmount == 0) ? amount :
+            totalSupply * amount / totalAmount;
+    }
+
+    function shareToAmount(
+        uint256 share
+    ) public view returns(uint256) {
+        return (totalSupply == 0) ? share :
+            totalAmount * share / totalSupply;
+    }
+
+    /*******************
+      Private functions
+    ********************/
     function _mint(
         address account,
-        uint256 amount
+        uint256 share
     ) private{
         require(account != address(0), "uEVMOS: mint to the zero address");
         uint256 share = amountToShare(amount);
@@ -120,11 +141,12 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         totalAmount -= amount;
     }
 
+    /// @return unlocked     total unlocked EVMOS
     /// @return restUnlocked EVMOS amount that user can receive
     function _repayPendingDebt(
         Locked storage lock,
         uint256 minRepaid
-    ) private returns (uint256) {
+    ) private returns (uint256, uint256) {
         IVault vault = IVault(lock.vault);
         address account = lock.account;
         uint256 amount = shareToAmount(lock.share);
@@ -133,11 +155,11 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         lock.received = true;
         if(amount >= pendingDebtInBase){
             IVault(vault).repayInBase{value: pendingDebtInBase}(account, minRepaid);
-            return amount - pendingDebtInBase;
+            return (amount, amount - pendingDebtInBase);
         }
         else {
             vault.repayInBase{value: amount}(account, minRepaid);
-            return 0;
+            return (amount, 0);
         }
     }
 
@@ -167,10 +189,12 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
                 unlockable += lock.share;
 
                 /// @dev kor) (개선 필요) aggregate하여 repay 횟수 줄이기
-                returnable += _repayPendingDebt(
+                (uint256 unlocked, uint256 returned) = _repayPendingDebt(
                     lock,
                     minRepaid
                 );
+                unlockable += unlocked;
+                returnable += returned;
             }
             else 
                 break;
@@ -252,7 +276,7 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
 
         /// @dev limit queue size?
         // require(lockedQueue.rear - lockedQueue.front < unbondLimit, "mintLockedToken: unbond limit exceeded." );
-
+        uint256 share = amountToShare(amount);
         locks.push(
             Locked({
                 account: msg.sender,
@@ -300,18 +324,19 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
             return (0, 0);
         
         // TODO assert under 7 loop?
-        // kor) 가스비 너무 많이 들게 되면 트랜잭션 실패할듯..
         for (uint256 i = nextUnlocked; i < queueLength; i++) {
             Locked memory lock = locks[lockedIds[i]];
             if(lock.unlockedAt <= block.timestamp){
+                // unlockable shares
                 unlockable += lock.share;
-
-                /// @dev kor) (개선 필요) aggregate하여 repay 횟수 줄이기
                 debt += IVault(lock.vault).getPendingDebtInBase(account);
             }
             else 
                 break;
         }
+
+        // unlockable share -> unlockable amonut
+        unlockable = shareToAmount(unlockable);
     }
 
     /// @notice TODO
@@ -322,18 +347,18 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         if(lock.unlockedAt > block.timestamp)
             return false;
         uint256 debt = IVault(lock.vault).getPendingDebtInBase(lock.account);
-        return debt >= amountToShare(lock.share);
+        return debt >= shareToAmount(lock.share);
     }
 
     function kill(uint256 lockedId) public override {
         Locked storage lock = locks[lockedId];
         require(lock.unlockedAt <= block.timestamp, "uEVMOS Kill: Cannot Unlock.");
         uint256 debt = IVault(lock.vault).getPendingDebtInBase(lock.account);
-
-        uint256 amount = amountToShare(lock.share);
-        require(debt >= amount, "uEVMOS Kill: Still safe.");
+        uint256 lockedAmount = shareToAmount(lock.share);
+        // liquidate threshold: 100%
+        require(debt >= lockedAmount, "uEVMOS Kill: Still safe.");
         
-        IVault(lock.vault).repayInBase{value: amount}(lock.account, 1);
+        IVault(lock.vault).repayInBase{value: lockedAmount}(lock.account, 1);
         lock.received = true;
         /// @dev event Kill?
     }

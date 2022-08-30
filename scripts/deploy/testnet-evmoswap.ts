@@ -47,12 +47,12 @@ async function deployTestnetWithEvmoswap() {
 
     await uEVMOS.updateMinterStatus(Stayking.address, true);
     
-    const ibmockUSDT = await deployVault(
+    const ibmockUSDC = await deployVault(
         deployer,
         Stayking,
         EvmoSwapHelper.address,
-        "interest bearing mockUSDT Vault",
-        "ibmockUSDT",
+        "interest bearing mockUSDC Vault",
+        "ibmockUSDC",
         mockUSDT.address,
         interestModel.address,
         1000  // 10%

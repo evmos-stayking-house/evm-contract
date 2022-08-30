@@ -76,8 +76,8 @@ async function deployTestnetWithMockswap() {
         deployer,
         Stayking,
         swapHelper.address,
-        "interest bearing mockUSDT Vault",
-        "ibmockUSDT",
+        "interest bearing mockUSDC Vault",
+        "ibmockUSDC",
         mockUSDC.address,
         interestModel.address,
         1000  // 10%

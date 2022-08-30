@@ -478,7 +478,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 repaidDebtInBase;
         uint256 stakedAmount; // can added if equityInBaseChanged > 0 or  debtInBaseChanged > 0 (add equity or borrow more debt)
         uint256 unstakedAmount;
-        if(equityInBaseChanged > 0){    // stake more with own equity
+        if(equityInBaseChanged >= 0){    // stake more with own equity
             require(
                 msg.value >= uint256(equityInBaseChanged), 
                 "changePosition: Not enough msg.value"
@@ -488,7 +488,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 stakedAmount = uint256(equityInBaseChanged);
             }
         } 
-        else if(equityInBaseChanged < 0) { // partial close position made up of equity
+        else { // partial close position made up of equity
             unstakedAmount = uint256(-equityInBaseChanged);
             // repaidDebtInBase = 0
         }
@@ -509,7 +509,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             IVault(vault).repayInToken(msg.sender, repaidDebt);
         }
         if(repaidDebtInBase > 0){ // repay debt for EVMOS
-            repaidDebt += IVault(vault).repayInBase{value: repaidDebtInBase}(msg.sender, 1);
+            IVault(vault).repayInBase{value: repaidDebtInBase}(msg.sender, 1);
         }
 
         Position storage p = positions[vault][positionId];
