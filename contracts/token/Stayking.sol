@@ -25,7 +25,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     // Operation Events
     event AddVault(address token, address vault);
     event UpdateVault(address token, address vault);
-    event UpdateConfigs(uint256 minDebtInBase, uint256 killFactorBps, uint256 reservedBps);
+    event UpdateConfigs(uint256 minDebtInBase, uint256 reservedBps, uint256 killFactorBps, uint256 liquidateDebtFactorBps);
     event ChangeDelegator(address delegator);
 
     address public delegator;
@@ -99,9 +99,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         // @TODO policy
         updateConfigs(
-            1e16,  // minDebtInBase (10EVMOS)
-            7500,    // killFactorBps
-            3000     // reservedBps
+            1e16,     // minDebtInBase (10EVMOS)
+            3000,     // reservedBps
+            7500,     // killFactorBps
+            7500      // liquidateDebtFactorBps
         );
 
         uEVMOS = IUnbondedEvmos(uEVMOS_);
@@ -162,13 +163,15 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function updateConfigs(
         uint256 _minDebtInBase,
+        uint256 _reservedBps,
         uint256 _killFactorBps,
-        uint256 _reservedBps
+        uint256 _liquidateDebtFactorBps
     ) public onlyOwner {
         minDebtInBase = _minDebtInBase;
-        killFactorBps = _killFactorBps;
         reservedBps = _reservedBps;
-        emit UpdateConfigs(_minDebtInBase, _killFactorBps, _reservedBps);
+        killFactorBps = _killFactorBps;
+        liquidateDebtFactorBps = _liquidateDebtFactorBps;
+        emit UpdateConfigs(_minDebtInBase, _reservedBps, _killFactorBps, _liquidateDebtFactorBps);
     }
 
     /***********************
@@ -549,7 +552,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         uint256 debtAmount = debtAmountOf(msg.sender, vault);
         (bool healthy, ) = _isHealthy(vault, p.share, debtAmount);
-        require(healthy, "changePosition: bad debt");
+        // require(healthy, "changePosition: bad debt");
 
         emit PositionChanged(
             msg.sender,
