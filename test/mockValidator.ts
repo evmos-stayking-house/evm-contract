@@ -1,7 +1,7 @@
 import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { latestBlock } from "@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BigNumber } from "ethers"
+import { BigNumber, ContractTransaction } from "ethers"
 import { ethers } from "hardhat";
 import { UnbondedEvmosCraft } from "../crafts";
 import { toBN } from "../scripts/utils";
@@ -20,6 +20,7 @@ export class MockValidator {
     validator: SignerWithAddress;
     unbondedInterval: number;
     uEVMOS: UnbondedEvmosCraft;
+    private _promises: Promise<any>[];
     private _bonds: Bond[];
 
     constructor(
@@ -37,6 +38,7 @@ export class MockValidator {
         this.apr = 300;
         this.amount = toBN(0, 1);
         this.lastClaimedAt = new Date();
+        this._promises = [];
         this._bonds = [];
     }
 
@@ -64,6 +66,25 @@ export class MockValidator {
         })
 
         await setBalance(this.validator.address, this.amount);
+    }
+
+    async handleTx(tx: ContractTransaction){
+        const STAKE = 'Stake(address,address,uint256,uint256)';
+        const UNSTAKE = 'Unstake(address,address,uint256,uint256)';
+        const signatures = [STAKE, UNSTAKE];
+
+        const event = ((await tx.wait()).events?.filter(e => signatures.includes(e.eventSignature || "_")));
+        if(event?.length !== 1)
+            throw Error("No stake event.");
+        
+        const [, , amount] = event[0].args as any[];
+        const sig = event[0].eventSignature;
+        if(sig === STAKE){
+            await this.stake(amount);
+        }
+        else if(sig === UNSTAKE){
+            await this.unstake(amount);
+        }
     }
 
     async claim(){
@@ -100,4 +121,21 @@ export class MockValidator {
         
         return unbonded;
     }
+
+    async enqueue(promiseFn: Promise<any>) {
+        this._promises.push(promiseFn);
+    }
+
+    async waitQueue(){
+        console.log('wait..')
+        sleep(5000);
+        console.log(this._promises.length)
+        await Promise.all(this._promises);
+        this._promises = [];
+        return;
+    }
 }
+
+function sleep(ms: number) {
+    return new Promise((r) => setTimeout(r, ms));
+  }
