@@ -4,10 +4,11 @@ pragma solidity ^0.8.3;
 import "../interface/IUnbondedEvmos.sol";
 import "../interface/IVault.sol";
 import "../lib/OwnableUpgradeable.sol";
+import "../lib/ERC20Upgradeable.sol";
 import "../lib/utils/SafeToken.sol";
 import "hardhat/console.sol";
 
-contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable { 
+contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable, ERC20Upgradeable { 
 
     event Lock(address account, address vault, uint256 lockedIndex);
     event Unlock(address account, uint256 amount, uint256 returned);
@@ -18,15 +19,8 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
 
     mapping(address => bool) public override isMinter;
 
-    string public constant name = "Unstaked EVMOS";
-    string public constant symbol = "uEVMOS";
-    uint8 public constant decimals = 18;
-
     uint256 public override lastUnbondedAt;
     uint256 public override unbondingInterval;   // maybe 14 + 2 days
-
-    uint256 public override totalAmount;
-    uint256 public override totalSupply;
 
     /// @dev unbondLimit?
     // uint256 public unbondLimit = 7;
@@ -35,7 +29,7 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         bool received;
         address account;
         address vault;
-        uint256 share;
+        uint256 amount;
         uint256 debtShare;
         uint256 unlockedAt;
     }
@@ -61,6 +55,10 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         uint256 unbondingInterval_
     ) external initializer {
         __Ownable_init();
+        __ERC20_init(
+            "Unstaked EVMOS", // name
+            "uEVMOS" //symbol
+        );
         updateConfigs(unbondingInterval_);
     }
 
@@ -71,10 +69,6 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         require(isMinter[msg.sender], "uEVMOS: Not minter.");
         _;
     }
-
-    /*******************
-      Private functions
-    ********************/
 
     function updateMinterStatus(
         address account,
@@ -92,38 +86,6 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     }
 
 
-    /*******************
-      Private functions
-    ********************/
-    function _mint(
-        address account,
-        uint256 amount
-    ) private{
-        require(account != address(0), "uEVMOS: mint to the zero address");
-        uint256 share = amountToShare(amount);
-
-        totalAmount += amount;
-        totalSupply += share;
-
-        _balances[account] += share;
-    }
-
-    function _burn(
-        address account,
-        uint256 share
-    ) private {
-        require(account != address(0), "uEVMOS: burn from the zero address");
-        uint256 amount = shareToAmount(share);
-
-        require(_balances[account] >= amount, "uEVMOS: burn amount exceeds balance");
-        unchecked {
-            _balances[account] -= amount;
-        }
-
-        totalSupply -= share;
-        totalAmount -= amount;
-    }
-
     /// @return unlocked     total unlocked EVMOS
     /// @return restUnlocked EVMOS amount that user can receive
     function _repayPendingDebt(
@@ -132,7 +94,7 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     ) private returns (uint256, uint256) {
         IVault vault = IVault(lock.vault);
         address account = lock.account;
-        uint256 amount = shareToAmount(lock.share);
+        uint256 amount = lock.amount;
 
         uint256 pendingDebtInBase = vault.pendingDebtShareToAmount(lock.debtShare);
         lock.received = true;
@@ -169,7 +131,7 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
             Locked storage lock = locks[lockedId];
             
             if(lock.unlockedAt <= block.timestamp){  /// @dev unlockable
-                unlockable += lock.share;
+                unlockable += lock.amount;
 
                 /// @dev kor) (개선 필요) aggregate하여 repay 횟수 줄이기
                 (uint256 unlocked, uint256 returned) = _repayPendingDebt(
@@ -195,27 +157,26 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         }
     }
 
-    /******************
-     * Util Functions *
-    *******************/
-    /// @notice
-    /// 유저는 예치하는 시점에 (예치 금액 / totalAmount) * totalSupply에 해당하는 share를 받음.
-    function amountToShare(uint256 amount) public view returns(uint256) {
-        return (totalAmount == 0) ? amount : (totalSupply * amount) / totalAmount;
-    }
-
-    function shareToAmount(uint256 share) public view returns(uint256) {
-        return (totalSupply == 0) ? share : (totalAmount * share) / totalSupply;
-    }
-
-
     /****************** 
        Core Functions
     *******************/
-    function balanceOf(
-        address account
-    ) public view override returns(uint256) {
-        return _balances[account];
+    function transfer(
+        address to,
+        uint256 amount
+    ) public override onlyMinter returns (bool){
+        _transfer(msg.sender, to, amount);
+        return true;
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) public override onlyMinter returns (bool){
+        address spender = _msgSender();
+        _spendAllowance(from, spender, amount);
+        _transfer(from, to, amount);
+        return true;
     }
 
     function lockedList(
@@ -263,7 +224,7 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
             Locked({
                 account: msg.sender,
                 vault: vault,
-                share: amountToShare(amount),
+                amount: amount,
                 debtShare: debtShare,
                 // TODO 개선 필요
                 unlockedAt: (
@@ -287,11 +248,8 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
     }
 
     function supplyUnbondedToken() payable public override {
-        /**
-            @TODO
-            maybe use delegate/undelegate tx ORACLE?
-         */
         lastUnbondedAt = block.timestamp;
+        emit Supply(msg.value);
     }
 
     /// @dev calc user's unlockable uEVMOS(includes debt) & debt
@@ -309,16 +267,13 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         for (uint256 i = nextUnlocked; i < queueLength; i++) {
             Locked memory lock = locks[lockedIds[i]];
             if(lock.unlockedAt <= block.timestamp){
-                // unlockable shares
-                unlockable += lock.share;
+                // unlockable amounts
+                unlockable += lock.amount;
                 debt += IVault(lock.vault).getPendingDebtInBase(account);
             }
             else 
                 break;
         }
-
-        // unlockable share -> unlockable amonut
-        unlockable = shareToAmount(unlockable);
     }
 
     /// @notice TODO
@@ -329,14 +284,14 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable {
         if(lock.unlockedAt > block.timestamp)
             return false;
         uint256 debt = IVault(lock.vault).getPendingDebtInBase(lock.account);
-        return debt >= shareToAmount(lock.share);
+        return debt >= lock.amount;
     }
 
     function kill(uint256 lockedId) public override {
         Locked storage lock = locks[lockedId];
         require(lock.unlockedAt <= block.timestamp, "uEVMOS Kill: Cannot Unlock.");
         uint256 debt = IVault(lock.vault).getPendingDebtInBase(lock.account);
-        uint256 lockedAmount = shareToAmount(lock.share);
+        uint256 lockedAmount = lock.amount;
         // liquidate threshold: 100%
         require(debt >= lockedAmount, "uEVMOS Kill: Still safe.");
         

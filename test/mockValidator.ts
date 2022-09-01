@@ -1,6 +1,8 @@
 import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
+import { latestBlock } from "@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers"
+import { ethers } from "hardhat";
 import { UnbondedEvmosCraft } from "../crafts";
 import { toBN } from "../scripts/utils";
 
@@ -39,6 +41,8 @@ export class MockValidator {
     }
 
     async stake(amount:BigNumber) {
+        await this._unbond();
+
         await this.delegator.sendTransaction({
             from: this.delegator.address,
             to: this.validator.address,
@@ -48,6 +52,8 @@ export class MockValidator {
     }
 
     async unstake(amount:BigNumber) {
+        await this._unbond();
+
         this.amount = this.amount.sub(amount);
         const unbondedAt = new Date();
         unbondedAt.setDate(unbondedAt.getDate() + this.unbondedInterval);
@@ -61,6 +67,8 @@ export class MockValidator {
     }
 
     async claim(){
+        await this._unbond();
+
         const timePast = (new Date().getTime() - this.lastClaimedAt.getTime()) / 1000;
         const claimAmount = this.amount.mul(this.apr).div(100).div(365).div(86400).mul(timePast);
         await setBalance(this.delegator.address, (await this.delegator.getBalance()).add(claimAmount));
@@ -68,15 +76,16 @@ export class MockValidator {
     }
 
     private async _unbond(){
+        const lastBlockNumber = await latestBlock();
+        const block = await ethers.provider.getBlock(lastBlockNumber);
+        const now = new Date(block.timestamp * 1000);
         const bondSize = this._bonds.length;
-        const today = new Date();
 
         let i;
         let unbonded = toBN(0, 1);
         for(i = 0; i < bondSize; i++){
             const { unbondedAt, amount } = this._bonds[i];
-            if(today < unbondedAt){
-                i -= 1;
+            if(now < unbondedAt){
                 break;
             }
             unbonded = unbonded.add(amount);
@@ -86,8 +95,9 @@ export class MockValidator {
             this.delegator.address,
             (await this.delegator.getBalance()).add(unbonded)
         );
+
+        this._bonds = this._bonds.slice(i);
         
         return unbonded;
-
     }
 }

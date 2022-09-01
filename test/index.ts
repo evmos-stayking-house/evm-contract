@@ -9,6 +9,8 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { mine, setBalance } from '@nomicfoundation/hardhat-network-helpers'
 import { latestBlock, setNextBlockTimestamp } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time'
 import { BigNumber } from "ethers"
+import { MockValidator } from "./mockValidator"
+import { setEventListener } from "./setEventListener"
 
 
 const toUSDC = (usdc: number) => toBN(usdc, 18);
@@ -27,6 +29,7 @@ describe('EVMOS Hackathon Test', async () => {
     let staker1: SignerWithAddress
     let validator: SignerWithAddress
     let locker: SignerWithAddress
+    let mockValidator: MockValidator
 
     let tUSDC:ERC20OwnableCraft;
     let ibtUSDC:VaultCraft;
@@ -55,35 +58,6 @@ describe('EVMOS Hackathon Test', async () => {
         return timeTravel(3600);
     }
 
-    let stakeStatus:StakeStatus = {
-        apr: 300,
-        amount: toBN(0, 1),
-        claimable: toBN(0, 1)
-    }
-
-    async function stakeEVMOS (amount:BigNumber) {
-        await delegator.sendTransaction({
-            from: delegator.address,
-            to: locker.address,
-            value: amount
-        });
-        stakeStatus.amount = stakeStatus.amount.add(amount);
-    }
-    async function unstakeEVMOS (amount:BigNumber) {
-        const beforeBalance = await locker.getBalance();
-        await locker.sendTransaction({
-            from: locker.address,
-            to: delegator.address,
-            value: amount
-        });
-
-        await setBalance(locker.address, beforeBalance.sub(amount));
-    }
-
-    async function compound(){
-
-    }
-
     before(async function (){
         await deployLocal();
         [deployer, delegator, lender1, staker1, validator, locker] = await ethers.getSigners();
@@ -96,8 +70,19 @@ describe('EVMOS Hackathon Test', async () => {
         Stayking = await craftform.contract("Stayking").attach();
         uEVMOS = await craftform.contract("UnbondedEvmos").attach();
 
+        const unbondedInterval = await uEVMOS.unbondingInterval();
+        
+        mockValidator = new MockValidator(
+            delegator,
+            validator,
+            uEVMOS,
+            unbondedInterval.toNumber()
+        )
+
         await tUSDC.mint(lender1.address, toUSDC(100000));
         await tUSDC.mint(staker1.address, toUSDC(100000));
+
+        setEventListener(Stayking, mockValidator);
     })
 
     describe("1. Vault:: initial deployed", async function (){
@@ -157,13 +142,14 @@ describe('EVMOS Hackathon Test', async () => {
     })
     
     describe("2. Stayking:: Add/Change position", async function () {
-        it("First add position (leverage x3)", async function (){    
+        it("First add position (leverage x3)", async function (){      
             const leverage = 3;
             const equity = toEVMOS(100);
             const debtInBase = equity.mul(leverage - 1);
 
             const beforeEVMOS = await staker1.getBalance();
             await tUSDC.connect(staker1).approve(ibtUSDC.address, equity);
+
             // debt: 200 EVMOS = 400 USDC
             await Stayking.connect(staker1).addPosition(
                 tUSDC.address,
@@ -189,6 +175,7 @@ describe('EVMOS Hackathon Test', async () => {
             expect(await ethers.provider.getBalance(Stayking.address)).to.equal(0);
             expect(await delegator.getBalance()).to.equal(positionValueInBase);
 
+            // expect(mockValidator.amount).to.eq(positionValueInBase);
         })
 
         it("accrued interest on next day is valid", async function (){

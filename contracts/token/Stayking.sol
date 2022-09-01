@@ -552,7 +552,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         uint256 debtAmount = debtAmountOf(msg.sender, vault);
         (bool healthy, ) = _isHealthy(vault, p.share, debtAmount);
-        // require(healthy, "changePosition: bad debt");
+        require(healthy, "changePosition: bad debt");
 
         emit PositionChanged(
             msg.sender,
