@@ -14,12 +14,19 @@ import { BigNumber } from "ethers"
 const toUSDC = (usdc: number) => toBN(usdc, 18);
 const toEVMOS = (evmos: number) => toBN(evmos, 18);
 
+interface StakeStatus {
+    apr: number
+    amount: BigNumber
+    claimable: BigNumber
+}
+
 describe('EVMOS Hackathon Test', async () => {
     let deployer: SignerWithAddress
     let delegator: SignerWithAddress
     let lender1: SignerWithAddress
     let staker1: SignerWithAddress
     let validator: SignerWithAddress
+    let locker: SignerWithAddress
 
     let tUSDC:ERC20OwnableCraft;
     let ibtUSDC:VaultCraft;
@@ -48,9 +55,38 @@ describe('EVMOS Hackathon Test', async () => {
         return timeTravel(3600);
     }
 
+    let stakeStatus:StakeStatus = {
+        apr: 300,
+        amount: toBN(0, 1),
+        claimable: toBN(0, 1)
+    }
+
+    async function stakeEVMOS (amount:BigNumber) {
+        await delegator.sendTransaction({
+            from: delegator.address,
+            to: locker.address,
+            value: amount
+        });
+        stakeStatus.amount = stakeStatus.amount.add(amount);
+    }
+    async function unstakeEVMOS (amount:BigNumber) {
+        const beforeBalance = await locker.getBalance();
+        await locker.sendTransaction({
+            from: locker.address,
+            to: delegator.address,
+            value: amount
+        });
+
+        await setBalance(locker.address, beforeBalance.sub(amount));
+    }
+
+    async function compound(){
+
+    }
+
     before(async function (){
         await deployLocal();
-        [deployer, delegator, lender1, staker1, validator] = await ethers.getSigners();
+        [deployer, delegator, lender1, staker1, validator, locker] = await ethers.getSigners();
 
         await setBalance(staker1.address, toBN(1000, 18));
         await setBalance(validator.address, toBN(1000, 30));
@@ -468,5 +504,9 @@ describe('EVMOS Hackathon Test', async () => {
 
             // expect(afterAccInterest.sub(beforeAccInterest)).to.equal(interest2);
         })
+    })
+
+    describe("7. Advanced change position", async function(){
+
     })
 })

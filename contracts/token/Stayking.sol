@@ -42,8 +42,9 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @dev min debtAmount in EVMOS (base token)
     uint256 public override minDebtInBase;
-    uint256 public override killFactorBps;
     uint256 public override reservedBps;
+    uint256 public override killFactorBps;
+    uint256 public override liquidateDebtFactorBps;
 
     /// @dev EVMOS amount reserved by Protocol
     uint256 public reservedPool;
@@ -90,6 +91,9 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address delegator_,
         address uEVMOS_
     ) external initializer {
+        // todo
+        liquidateDebtFactorBps = 10000;
+
         __Ownable_init();
         __ReentrancyGuard_init();
 
@@ -202,12 +206,6 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 amount,
         uint256 repaidDebt
     ) private {
-        uint256 debtInBaseUnstaked = IVault(vault).getBaseIn(repaidDebt);
-        require(
-            debtInBaseUnstaked * 1E4 <= amount * killFactorBps,
-            "unstake: too much debt in unstaked EVMOS"
-        );
-
         uint256 share = amountToShare(amount);
         p.share -= share;
         totalAmount -= amount;
@@ -339,119 +337,120 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         positionIdOf[msg.sender][vault] = 0; // kor) positionId 초기화
     }
 
-    /// @dev Borrow more debt (increase debt ratio)
-    /// @param debtToken    debtToken Address (not vault address)
-    /// @param extraDebtInBase  amount of additional debt in EVMOS
-    function addDebt(
-        address debtToken,
-        uint256 extraDebtInBase
-    ) public override {
-        require(extraDebtInBase > 0, "addDebt: extraDebtInBase <= 0");
+    // deprecated
+    // /// @dev Borrow more debt (increase debt ratio)
+    // /// @param debtToken    debtToken Address (not vault address)
+    // /// @param extraDebtInBase  amount of additional debt in EVMOS
+    // function addDebt(
+    //     address debtToken,
+    //     uint256 extraDebtInBase
+    // ) public override {
+    //     require(extraDebtInBase > 0, "addDebt: extraDebtInBase <= 0");
 
-        address vault = tokenToVault[debtToken];
-        uint256 positionId = positionIdOf[msg.sender][vault];
-        require(positionId > 0, "addDebt: no position");
+    //     address vault = tokenToVault[debtToken];
+    //     uint256 positionId = positionIdOf[msg.sender][vault];
+    //     require(positionId > 0, "addDebt: no position");
 
-        Position storage p = positions[vault][positionId];
+    //     Position storage p = positions[vault][positionId];
 
-        // borrow token from vault
-        IVault(vault).loan(msg.sender, extraDebtInBase);
-        _stake(p, extraDebtInBase);
+    //     // borrow token from vault
+    //     IVault(vault).loan(msg.sender, extraDebtInBase);
+    //     _stake(p, extraDebtInBase);
 
-        uint256 debtAmount = debtAmountOf(msg.sender, vault);
-        (bool healthy, ) = _isHealthy(vault, p.share, debtAmount);
-        require(healthy, "addDebt: bad debt, cannot add more debt anymore.");
+    //     uint256 debtAmount = debtAmountOf(msg.sender, vault);
+    //     (bool healthy, ) = _isHealthy(vault, p.share, debtAmount);
+    //     require(healthy, "addDebt: bad debt, cannot add more debt anymore.");
 
-        emit PositionChanged(
-            msg.sender,
-            vault,
-            shareToAmount(p.share),
-            p.share,
-            debtAmount
-        );
+    //     emit PositionChanged(
+    //         msg.sender,
+    //         vault,
+    //         shareToAmount(p.share),
+    //         p.share,
+    //         debtAmount
+    //     );
 
-    }
+    // }
 
-    /// @dev Repay debt (decrease debt ratio, total staked amount(or share) does not change)
-    /// @notice user should repay debt using debtToken
-    /// @notice user approve should be preceded
-    /// @param debtToken    debtToken Address (not vault address)
-    /// @param repaidDebt  amount of repaid debt in debtToken
-    function repayDebt(
-        address debtToken,
-        uint256 repaidDebt
-    ) public override {
-        address vault = tokenToVault[debtToken];
-        uint256 positionId = positionIdOf[msg.sender][vault];
-        require(positionId > 0, "repayDebt: no position");
+    // /// @dev Repay debt (decrease debt ratio, total staked amount(or share) does not change)
+    // /// @notice user should repay debt using debtToken
+    // /// @notice user approve should be preceded
+    // /// @param debtToken    debtToken Address (not vault address)
+    // /// @param repaidDebt  amount of repaid debt in debtToken
+    // function repayDebt(
+    //     address debtToken,
+    //     uint256 repaidDebt
+    // ) public override {
+    //     address vault = tokenToVault[debtToken];
+    //     uint256 positionId = positionIdOf[msg.sender][vault];
+    //     require(positionId > 0, "repayDebt: no position");
 
-        Position storage p = positions[vault][positionId];
-        uint256 debtAmount = debtAmountOf(msg.sender, vault);
+    //     Position storage p = positions[vault][positionId];
+    //     uint256 debtAmount = debtAmountOf(msg.sender, vault);
 
-        SafeToken.safeTransferFrom(
-            debtToken,
-            msg.sender,
-            address(this),
-            repaidDebt
-        );
-        SafeToken.safeApprove(debtToken, vault, repaidDebt);
-        IVault(vault).repayInToken(msg.sender, repaidDebt);
+    //     SafeToken.safeTransferFrom(
+    //         debtToken,
+    //         msg.sender,
+    //         address(this),
+    //         repaidDebt
+    //     );
+    //     SafeToken.safeApprove(debtToken, vault, repaidDebt);
+    //     IVault(vault).repayInToken(msg.sender, repaidDebt);
 
-        emit PositionChanged(
-            msg.sender,
-            vault,
-            shareToAmount(p.share),
-            p.share,
-            debtAmount - repaidDebt
-        );
-    }
+    //     emit PositionChanged(
+    //         msg.sender,
+    //         vault,
+    //         shareToAmount(p.share),
+    //         p.share,
+    //         debtAmount - repaidDebt
+    //     );
+    // }
 
-    /// @dev Repay debt with EVMOS (decrease debt ratio, total staked amount(or share) does not change)
-    /// @param debtToken    debtToken Address (not vault address)
-    /// @param minRepaid    minimum value to be repaid
-    /// @notice repaidDebtInBase = msg.value
-    function repayDebtInBase(
-        address debtToken,
-        uint256 minRepaid
-    ) public payable override {
-        address vault = tokenToVault[debtToken];
-        uint256 positionId = positionIdOf[msg.sender][vault];
-        require(positionId > 0, "repayDebtInBase: no position");
+    // /// @dev Repay debt with EVMOS (decrease debt ratio, total staked amount(or share) does not change)
+    // /// @param debtToken    debtToken Address (not vault address)
+    // /// @param minRepaid    minimum value to be repaid
+    // /// @notice repaidDebtInBase = msg.value
+    // function repayDebtInBase(
+    //     address debtToken,
+    //     uint256 minRepaid
+    // ) public payable override {
+    //     address vault = tokenToVault[debtToken];
+    //     uint256 positionId = positionIdOf[msg.sender][vault];
+    //     require(positionId > 0, "repayDebtInBase: no position");
 
-        Position storage p = positions[vault][positionId];
-        uint256 debtAmount = debtAmountOf(msg.sender, vault);
-        uint256 repaidDebt = IVault(vault).repayInBase{value: msg.value}(msg.sender, minRepaid);
-        emit PositionChanged(
-            msg.sender,
-            vault,
-            shareToAmount(p.share),
-            p.share,
-            debtAmount - repaidDebt
-        );
-    }
+    //     Position storage p = positions[vault][positionId];
+    //     uint256 debtAmount = debtAmountOf(msg.sender, vault);
+    //     uint256 repaidDebt = IVault(vault).repayInBase{value: msg.value}(msg.sender, minRepaid);
+    //     emit PositionChanged(
+    //         msg.sender,
+    //         vault,
+    //         shareToAmount(p.share),
+    //         p.share,
+    //         debtAmount - repaidDebt
+    //     );
+    // }
 
-
+    /// deprecated
     /// @dev add additional equity (decrease debt ratio)
     /// @param debtToken    debtToken Address (not vault address)
     /// @param extraEquity  amount of additional equity
-    function addEquity(
-        address debtToken,
-        uint256 extraEquity
-    ) payable public override {
-        address vault = tokenToVault[debtToken];
-        uint256 positionId = positionIdOf[msg.sender][vault];
-        require(positionId > 0, "addEquity: no position");
-        Position storage p = positions[vault][positionId];
+    // function addEquity(
+    //     address debtToken,
+    //     uint256 extraEquity
+    // ) payable public override {
+    //     address vault = tokenToVault[debtToken];
+    //     uint256 positionId = positionIdOf[msg.sender][vault];
+    //     require(positionId > 0, "addEquity: no position");
+    //     Position storage p = positions[vault][positionId];
 
-        _stake(p, extraEquity);
-        emit PositionChanged(
-            msg.sender,
-            vault,
-            shareToAmount(p.share),
-            p.share,
-            debtAmountOf(msg.sender, vault)
-        );
-    }
+    //     _stake(p, extraEquity);
+    //     emit PositionChanged(
+    //         msg.sender,
+    //         vault,
+    //         shareToAmount(p.share),
+    //         p.share,
+    //         debtAmountOf(msg.sender, vault)
+    //     );
+    // }
 
     /** @notice change position value
         case 1. equityInBaseChanged > 0 
@@ -531,13 +530,20 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         if(stakedAmount >= unstakedAmount){
             _stake(p, stakedAmount - unstakedAmount);
         } else {
+            // total unstaked amount
+            uint256 totalUnstaked = unstakedAmount - stakedAmount;
+            uint256 unstakedDebtInBase = uint256(-debtInBaseChanged);
+
+            require(
+                unstakedDebtInBase * 1E4 <= totalUnstaked * liquidateDebtFactorBps,
+                "unstake: too much debt in unstaked EVMOS"
+            );
+
             _unstake(
                 p,
                 vault,
-                unstakedAmount - stakedAmount,
-                debtInBaseChanged < 0 ? 
-                    IVault(vault).getTokenOut(uint256(-debtInBaseChanged))
-                    : 0
+                totalUnstaked,
+                unstakedDebtInBase > 0 ? IVault(vault).getTokenOut(unstakedDebtInBase) : 0
             );
         }
 

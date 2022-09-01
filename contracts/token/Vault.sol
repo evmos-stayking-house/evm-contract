@@ -392,8 +392,10 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     ) public override onlyStayking returns(uint256 pendingDebtShare) {
         require(amount <= debtAmountOf[user], "pendRepay: too much amount to repay.");
         /// @dev subtract from debtAmountOf[user]
-        totalDebtAmount - amount;
-        debtAmountOf[user] -= amount;
+        unchecked {
+            debtAmountOf[user] -= amount;
+        }
+        totalDebtAmount -= amount;
 
         /// @dev The pendingDebtAmount increases over time. 
         /// This is because lending interest is charged during the 14 days of unbonding.
