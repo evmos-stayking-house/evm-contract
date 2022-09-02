@@ -39,13 +39,13 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
     /**
         @dev
-        totalAmount == Token.balanceOf(this) + totalDebtAmount
+        totalAmount == Token.balanceOf(this) + totalStakedDebtAmount + totalPendingDebtAmount
         totalShare == totalSupply()
      */
 
     // Debt Amounts
     mapping(address => uint256) public override debtAmountOf;
-    uint256 public override totalDebtAmount;
+    uint256 public override totalStakedDebtAmount;
 
     // Pending Debts
     mapping(address => uint256) public pendingDebtShareOf;
@@ -107,8 +107,12 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     }
 
     // @dev (token in vault) + (debt)
+    function totalDebtAmount() public override view returns(uint256){
+        return totalStakedDebtAmount + totalPendingDebtAmount;
+    }
+
     function totalAmount() public override view returns(uint256){
-        return IERC20(token).balanceOf(address(this)) + totalDebtAmount + totalPendingDebtAmount;
+        return IERC20(token).balanceOf(address(this)) + totalDebtAmount();
     }
 
     function updateMinReservedBps(uint256 _minReservedBps) public override onlyOwner {
@@ -163,13 +167,13 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     function getInterestRate() public override view returns(uint256 interestRate){
         interestRate = IInterestModel(interestModel)
             .calcInterestRate(
-                totalDebtAmount + totalPendingDebtAmount,
+                totalDebtAmount(),
                 IERC20(token).balanceOf(address(this))
             );
     }
 
     function utilizationRateBps() public override view returns(uint256){
-        return 1E4 * (totalDebtAmount + totalPendingDebtAmount) / totalAmount();
+        return 1E4 * totalDebtAmount() / totalAmount();
     }
 
     function saveUtilizationRateBps() public override {
@@ -192,11 +196,15 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
             return;
         uint256 timePast = block.timestamp - lastAccruedAt;
 
-        /// @dev get interest rate by utilization rate
-        uint256 interest = (getInterestRate() * (totalDebtAmount + accInterest) * timePast) 
+        uint256 stakedInterest = (getInterestRate() * totalStakedDebtAmount * timePast) 
             / DENOM;
 
-        accInterest += interest;
+        accInterest += stakedInterest;
+
+        uint256 pendingInterest = (getInterestRate() * totalPendingDebtAmount * timePast) 
+            / DENOM;
+        totalPendingDebtAmount += pendingInterest;
+
         lastAccruedAt = block.timestamp;
     }
 
@@ -302,10 +310,10 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         ///@dev swap token -> (amountInBase)EVMOS
         debt = _swapToBase(debtInBase);
         debtAmountOf[user] += debt;
-        totalDebtAmount += debt;
+        totalStakedDebtAmount += debt;
 
         require(
-            (totalDebtAmount + totalPendingDebtAmount) * 1E4 <= totalAmount() * (1E4 - minReservedBps),
+            (totalStakedDebtAmount + totalPendingDebtAmount) * 1E4 <= totalAmount() * (1E4 - minReservedBps),
             "Loan: Cant' loan debt anymore."
         );
 
@@ -324,7 +332,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         unchecked {
             debtAmountOf[user] -= amount;
         }
-        totalDebtAmount -= amount;
+        totalStakedDebtAmount -= amount;
         emit Repay(user, amount);
     }
 
@@ -395,7 +403,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         unchecked {
             debtAmountOf[user] -= amount;
         }
-        totalDebtAmount -= amount;
+        totalStakedDebtAmount -= amount;
 
         /// @dev The pendingDebtAmount increases over time. 
         /// This is because lending interest is charged during the 14 days of unbonding.

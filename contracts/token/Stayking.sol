@@ -20,7 +20,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     event RemovePosition(address indexed user, address indexed vault, uint256 equity, uint256 debtInBase, uint256 debt, uint256 share);
     event PositionChanged(address indexed user, address indexed vault, uint256 amount, uint256 share, uint256 debt);
     event Kill(address indexed killer, address indexed user, address vault, uint256 equity, uint256 debtInBase, uint256 debt, uint256 share);
-    event Accrue(address indexed delegator, uint256 totalStaked, uint256 distributed);
+    event Accrue(address indexed delegator, uint256 accrued, uint256 totalStaked);
 
     // Operation Events
     event AddVault(address token, address vault);
@@ -589,13 +589,14 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function isKillable(
         address debtToken,
         uint256 positionId
-    ) public override view returns(bool healthy) {
+    ) public override view returns(bool) {
         address vault = tokenToVault[debtToken];
         Position memory p = positions[vault][positionId];
 
         if(p.share == 0)    /// @dev removed position
             return false;
-        (healthy, ) = _isHealthy(vault, p.share, debtAmountOf(p.user, vault));
+        (bool healthy, ) = _isHealthy(vault, p.share, debtAmountOf(p.user, vault));
+        return !healthy;
     }
 
     function kill(
@@ -627,7 +628,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /***********************
      * Only for Delegator *
      ***********************/
-    /// @param totalStaked  current total staked EVMOS (= last total amount + reward)
+    /// @param totalStaked  current total staked EVMOS (except staking reward)
     function getAccruedValue (
         uint256 totalStaked
     ) public view override returns(uint256) {
@@ -644,10 +645,12 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     /// @dev msg.value = all of staking reward 
-    /// @param totalStaked  current total staked EVMOS before distributed
+    /// @param totalStaked  current total staked EVMOS (except staking reward)
     function accrue(
         uint256 totalStaked
     ) payable public onlyDelegator override {
+
+        require(totalStaked == totalAmount, "totalStaked < before totalAmount");
 
         // 1. distribute to Protocol
         uint256 reserved = (totalStaked - totalAmount) * reservedBps / 1E4;
@@ -671,20 +674,20 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 );
             }
 
-            totalAmount = totalStaked - reserved - sumInterests;
+            // return remained EVMOS to auto-compound
+            uint256 accrued = msg.value - reserved - sumInterests;
+            totalAmount += accrued;
 
-            // return remained EVMOS
-            uint256 remained = msg.value - reserved - sumInterests;
-            if(remained > 0){
-                SafeToken.safeTransferEVMOS(msg.sender, remained);
+            if(accrued > 0){
+                SafeToken.safeTransferEVMOS(msg.sender, accrued);
             }
 
-            emit Accrue(msg.sender, totalStaked, reserved + sumInterests);
+            emit Accrue(msg.sender, accrued, reserved + sumInterests);
         }
     /**
         @dev
         else case is when the sum of interest for vaults is insufficient.
-        this case, totalAmount not changes
+        this case, totalAmount not changes (totalAmount = totalStaked)
         */
         else {  
             for(uint256 i = 0; i < vaultsLength; i++){
@@ -694,7 +697,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 vault.payInterest{value: interestInBase}(minPaidInterest);
             }
 
-            emit Accrue(msg.sender, totalStaked, msg.value);
+            emit Accrue(msg.sender, 0, totalAmount);
         }
     }
 

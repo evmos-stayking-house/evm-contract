@@ -12,6 +12,12 @@ interface Bond {
     unbondedAt: Date
 }
 
+async function now(){
+    const lastBlockNumber = await latestBlock();
+    const block = await ethers.provider.getBlock(lastBlockNumber);
+    return block.timestamp;
+}
+
 export class MockValidator {
     apr: number;
     lastClaimedAt: Date;
@@ -68,12 +74,16 @@ export class MockValidator {
         await setBalance(this.validator.address, this.amount);
     }
 
+    // handle stake, unstake, accrue
     async handleTx(tx: ContractTransaction){
         const STAKE = 'Stake(address,address,uint256,uint256)';
         const UNSTAKE = 'Unstake(address,address,uint256,uint256)';
-        const signatures = [STAKE, UNSTAKE];
+        const ACCRUE = 'Accrue(address,uint256,uint256)';
+        const signatures = [STAKE, UNSTAKE, ACCRUE];
 
-        const event = ((await tx.wait()).events?.filter(e => signatures.includes(e.eventSignature || "_")));
+        const event = ((await tx.wait()).events?.filter(
+            e => e.eventSignature && signatures.includes(e.eventSignature)
+        ));
         if(event?.length !== 1)
             throw Error("No stake event.");
         
@@ -85,12 +95,15 @@ export class MockValidator {
         else if(sig === UNSTAKE){
             await this.unstake(amount);
         }
+        else if(sig === ACCRUE){
+            await this.unstake(amount);
+        }
     }
 
     async claim(){
         await this._unbond();
 
-        const timePast = (new Date().getTime() - this.lastClaimedAt.getTime()) / 1000;
+        const timePast = (await now()) - Math.floor(this.lastClaimedAt.getTime() / 1000);
         const claimAmount = this.amount.mul(this.apr).div(100).div(365).div(86400).mul(timePast);
         await setBalance(this.delegator.address, (await this.delegator.getBalance()).add(claimAmount));
         return claimAmount;
@@ -122,20 +135,5 @@ export class MockValidator {
         return unbonded;
     }
 
-    async enqueue(promiseFn: Promise<any>) {
-        this._promises.push(promiseFn);
-    }
-
-    async waitQueue(){
-        console.log('wait..')
-        sleep(5000);
-        console.log(this._promises.length)
-        await Promise.all(this._promises);
-        this._promises = [];
-        return;
-    }
+    
 }
-
-function sleep(ms: number) {
-    return new Promise((r) => setTimeout(r, ms));
-  }

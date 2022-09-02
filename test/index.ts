@@ -8,7 +8,6 @@ import { toBN } from '../scripts/utils'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { mine, setBalance } from '@nomicfoundation/hardhat-network-helpers'
 import { latestBlock, setNextBlockTimestamp } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time'
-import { BigNumber } from "ethers"
 import { MockValidator } from "./mockValidator"
 
 
@@ -29,17 +28,13 @@ describe('EVMOS Hackathon Test', async () => {
     let Stayking:StaykingCraft;
     let uEVMOS:UnbondedEvmosCraft;
 
-    // returns balance of tUSDC & ibtUSDC
-    async function getBalances(address: string){
-        const usdc = await tUSDC.balanceOf(address);
-        const ibUsdc = await ibtUSDC.balanceOf(address);
-        return [usdc, ibUsdc]
-    }
-
-    async function timeTravel(seconds: number){
+    async function now(){
         const lastBlockNumber = await latestBlock();
         const block = await ethers.provider.getBlock(lastBlockNumber);
-        const destination = new Date((block.timestamp + seconds) * 1000);
+        return block.timestamp;
+    }
+    async function timeTravel(seconds: number){
+        const destination = new Date((await now() + seconds) * 1000);
         await mine(1);
         await setNextBlockTimestamp(destination);
         return destination;
@@ -71,19 +66,30 @@ describe('EVMOS Hackathon Test', async () => {
             validator,
             uEVMOS,
             unbondedInterval.toNumber()
-        )
+        );
+
+        await Stayking.changeDelegator(delegator.address);
 
         await tUSDC.mint(lender1.address, toUSDC(100000));
         await tUSDC.mint(staker1.address, toUSDC(100000));
     })
 
+
     describe("1. Vault:: initial deployed", async function (){
         it("config settings", async function () {
             const staykingInVault = await ibtUSDC.stayking();
             expect(staykingInVault).to.eq(Stayking.address);
+
+            expect(await Stayking.delegator()).to.equal(delegator.address);
         })
 
         it("First time deposit & withdraw", async function () {
+            // returns balance of tUSDC & ibtUSDC
+            async function getBalances(address: string){
+                const usdc = await tUSDC.balanceOf(address);
+                const ibUsdc = await ibtUSDC.balanceOf(address);
+                return [usdc, ibUsdc]
+            }
             /**
              * step 0 : before start
              * step 1 : deposit   5 USDC
@@ -169,21 +175,18 @@ describe('EVMOS Hackathon Test', async () => {
             expect(await ethers.provider.getBalance(ibtUSDC.address)).to.equal(0);
             expect(await ethers.provider.getBalance(Stayking.address)).to.equal(0);
 
-
-            // expect(mockValidator.amount).to.equal(positionValueInBase);
-            console.log(mockValidator.amount);
+            expect(mockValidator.amount).to.equal(positionValueInBase);
         })
 
         it("accrued interest on next day is valid", async function (){
             // before interest : approximately 0
             const beforeAccInterest = await ibtUSDC.accInterest();
-            expect(beforeAccInterest).to.approximately(0, 100000);
-            
+
             await toNextDay();
-            await ibtUSDC.accrue();
+            await ibtUSDC.accrue(); // +1 sec
 
             // maybe 4E18
-            const totalDebt = await ibtUSDC.totalDebtAmount();
+            const totalStakedDebt = await ibtUSDC.totalStakedDebtAmount();
 
             // maybe 400 (4%)
             const ur = await ibtUSDC.utilizationRateBps();
@@ -194,10 +197,10 @@ describe('EVMOS Hackathon Test', async () => {
             expect(ir).to.equal(expectedIR);
 
             // => x/3 : interest rate
-            const expected = expectedIR.mul(totalDebt).mul(86400).div(toBN(1, 18));
+            const expected = expectedIR.mul(totalStakedDebt.add(beforeAccInterest)).mul(86400+1).div(toBN(1, 18));
             const afterAccInterest = await ibtUSDC.accInterest();
 
-            expect(afterAccInterest).to.equal(expected);
+            expect(afterAccInterest.sub(beforeAccInterest)).to.equal(expected);
         })
 
         it("Add Equity", async function(){
@@ -251,13 +254,16 @@ describe('EVMOS Hackathon Test', async () => {
             expect(afterDebtInBase.sub(beforeDebtInBase))
                 .to.equal(extraDebtInBase, "Debt value not increased properly");
 
+            const isKillable = await Stayking.isKillable(tUSDC.address, 1);
+            expect(isKillable).to.false;
+
             expect(await ethers.provider.getBalance(Stayking.address)).to.equal(0);
             expect(mockValidator.amount)
                 .to.equal(beforeTotalStaked.add(extraDebtInBase));
         })
 
         it("Cannot borrow debt over debt ratio", async function(){
-            const extraDebtInBase = toEVMOS(500);
+            const extraDebtInBase = toEVMOS(1000);
             await expect(
                 Stayking.connect(staker1).changePosition(
                     tUSDC.address,
@@ -315,7 +321,9 @@ describe('EVMOS Hackathon Test', async () => {
             /**
              * Stayking check
              */
-            await Stayking.connect(staker1).removePosition(tUSDC.address);
+            const tx = await Stayking.connect(staker1).removePosition(tUSDC.address);
+            await mockValidator.handleTx(tx);
+
             const afterUEvmos = await uEVMOS.balanceOf(staker1.address);
             const [afterPosVaule, afterDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
             const pendingDebt = await ibtUSDC.getPendingDebtInBase(staker1.address);
@@ -459,39 +467,60 @@ describe('EVMOS Hackathon Test', async () => {
         })
     })
 
-    describe("6. Delegator, accrue when auto-compounding", async function(){
-        async function claim(beforeTotalStaked: BigNumber, aprBps?: number){
-            if(!aprBps){
-                // Random APR : 10% ~ 400%
-                aprBps = Math.floor(10 + 390 * Math.random());
-            }
-            const reward = beforeTotalStaked.mul(aprBps).div(1E4).div(365);
-            await validator.sendTransaction({
-                from: validator.address,
-                to: delegator.address,
-                value: reward
-            });
-        }
+    describe("6. Delegator accrues when auto-compounding", async function(){
 
         it("accrues interest to vault properly.", async function(){
-            const interest = await ibtUSDC.getInterestInBase();
-            const beforeAccInterest = await ibtUSDC.accInterest();
+            const beforeDelegatorBalance = await delegator.getBalance();
+            const claimed = await mockValidator.claim();
 
-            const day1 = await toNextDay();
-            await ibtUSDC.saveUtilizationRateBps();
+            const afterClaimDelegatorBalance = await delegator.getBalance();
+            expect(afterClaimDelegatorBalance).to.equal(beforeDelegatorBalance.add(claimed));
 
-            const afterAccInterest = await ibtUSDC.accInterest();
-            const interest2 = await ibtUSDC.getInterestInBase();
+            const accrued = await Stayking.getAccruedValue(mockValidator.amount.add(claimed));
 
-            // console.log(interest.div(toBN(1,18)).toString())
-            // console.log(interest2.div(toBN(1,18)).toString())
-            // console.log((await ibtUSDC.getInterestRate()).toString())
+            const tx = await Stayking
+                .connect(delegator)
+                .accrue(
+                    mockValidator.amount.add(claimed),
+                    {value: claimed}
+                );
+            const txGasFee = tx.gasLimit.mul(tx.gasPrice!);
 
-            // expect(afterAccInterest.sub(beforeAccInterest)).to.equal(interest2);
+            const afterAccrueDelegatorBalance = await delegator.getBalance();
+
+            expect(afterClaimDelegatorBalance.sub(afterAccrueDelegatorBalance))
+                .approximately(accrued, txGasFee);
+        })
+
+        it("After accrued, every position's debt ratio should be decreased", async function(){
+            
         })
     })
 
     describe("7. Advanced change position", async function(){
+        it("Case 1: Remove equity", async function(){
+            const [positionValueInBase, positionDebtInBase, debt] = await Stayking.positionInfo(staker1.address, tUSDC.address);
+            console.log(positionValueInBase.toString())
+            console.log(positionDebtInBase.toString())
+            // const removedEquity = 
+            
+        })
+        it("Case 2: Remove debt", async function(){
 
+        })
+
+        it("Case 3: Add equity, Add debt", async function(){
+            
+        })
+        it("Case 4: Add equity, Remove debt", async function(){
+
+        })
+        
+        it("Case 5: Remove equity, Add debt", async function(){
+
+        })
+        it("Case 6: Remove equity, Remove debt", async function(){
+
+        })
     })
 })
