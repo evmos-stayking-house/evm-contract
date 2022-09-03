@@ -87,7 +87,7 @@ interface IStayking {
     /***********************
      * Only for Delegator *
      ***********************/
-    function getAccruedValue(uint256 totalStaked) external view returns(uint256);
+    function getAccruedValue(uint256 reward) external view returns(uint256);
     function accrue(uint256 totalStaked) payable external;
 
 }

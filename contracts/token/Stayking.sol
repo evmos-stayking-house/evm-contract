@@ -214,7 +214,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         totalAmount -= amount;
         totalShare -= share;
 
-        uint256 pendingDebtShare = IVault(vault).pendRepay(p.user, repaidDebt);
+        uint256 pendingDebtShare = repaidDebt > 0 ? IVault(vault).pendRepay(p.user, repaidDebt) : 0;
 
         uEVMOS.mintLockedToken(
             p.user,
@@ -628,11 +628,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /***********************
      * Only for Delegator *
      ***********************/
-    /// @param totalStaked  current total staked EVMOS (except staking reward)
+    /// @param reward  claimed staking reward
     function getAccruedValue (
-        uint256 totalStaked
+        uint256 reward
     ) public view override returns(uint256) {
-        uint256 reward = totalStaked - totalAmount;
         uint256 reserved = reward * reservedBps / 1E4;
 
         uint256 vaultsLength = vaults.length;
@@ -641,7 +640,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             interest += IVault(vaults[i]).getInterestInBase();
         }
 
-        return reserved + interest;
+        return reward - (reserved + interest);
     }
 
     /// @dev msg.value = all of staking reward 
@@ -649,11 +648,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function accrue(
         uint256 totalStaked
     ) payable public onlyDelegator override {
-
-        require(totalStaked == totalAmount, "totalStaked < before totalAmount");
+        require(totalStaked >= totalAmount, "totalStaked < before totalAmount");
 
         // 1. distribute to Protocol
-        uint256 reserved = (totalStaked - totalAmount) * reservedBps / 1E4;
+        uint256 reserved = msg.value * reservedBps / 1E4;
         reservedPool += reserved;
 
         uint256 sumInterests = 0;
@@ -675,14 +673,14 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             }
 
             // return remained EVMOS to auto-compound
-            uint256 accrued = msg.value - reserved - sumInterests;
+            uint256 accrued = distributable - sumInterests;
             totalAmount += accrued;
 
             if(accrued > 0){
                 SafeToken.safeTransferEVMOS(msg.sender, accrued);
             }
 
-            emit Accrue(msg.sender, accrued, reserved + sumInterests);
+            emit Accrue(msg.sender, accrued, totalAmount);
         }
     /**
         @dev

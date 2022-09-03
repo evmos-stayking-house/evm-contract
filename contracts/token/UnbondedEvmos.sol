@@ -86,33 +86,24 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable, ERC20Upgradeable {
     }
 
 
-    /// @return unlocked     total unlocked EVMOS
-    /// @return restUnlocked EVMOS amount that user can receive
+    /// @return returnable EVMOS amount that user can receive
     function _repayPendingDebt(
-        Locked storage lock,
-        uint256 minRepaid
-    ) private returns (uint256, uint256) {
+        Locked storage lock
+    ) private returns (uint256 returnable) {
         IVault vault = IVault(lock.vault);
         address account = lock.account;
         uint256 amount = lock.amount;
 
-        uint256 pendingDebtInBase = vault.pendingDebtShareToAmount(lock.debtShare);
+        // kor) unlocked된 EVMOS 전량으로 repayPendingDebt을 갚고,
+        // repayPendingDebt 함수 내에서 빚 갚고 남은 EVMOS는 다시 돌려준다.
+        returnable = IVault(vault).repayPendingDebt{value: amount}(account);
         lock.received = true;
-        if(amount >= pendingDebtInBase){
-            IVault(vault).repayInBase{value: pendingDebtInBase}(account, minRepaid);
-            return (amount, amount - pendingDebtInBase);
-        }
-        else {
-            vault.repayInBase{value: amount}(account, minRepaid);
-            return (amount, 0);
-        }
     }
 
     /// @dev unlock all of unlockable uEVMOS
     function _unlock(
         address account,
-        LockedQueue storage lockedQueue,
-        uint256 minRepaid
+        LockedQueue storage lockedQueue
     ) private {
         lockedQueue = lockedOf[account];
         uint256 nextUnlocked = lockedQueue.nextUnlocked; 
@@ -134,11 +125,7 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable, ERC20Upgradeable {
                 unlockable += lock.amount;
 
                 /// @dev kor) (개선 필요) aggregate하여 repay 횟수 줄이기
-                (uint256 unlocked, uint256 returned) = _repayPendingDebt(
-                    lock,
-                    minRepaid
-                );
-                unlockable += unlocked;
+                uint256 returned = _repayPendingDebt(lock);
                 returnable += returned;
             }
             else 
@@ -216,13 +203,13 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable, ERC20Upgradeable {
         LockedQueue storage lockedQueue = lockedOf[to];
 
         /// @dev consume all of unlock queue
-        _unlock(to, lockedQueue, 1);
+        _unlock(to, lockedQueue);
 
         /// @dev limit queue size?
         // require(lockedQueue.rear - lockedQueue.front < unbondLimit, "mintLockedToken: unbond limit exceeded." );
         locks.push(
             Locked({
-                account: msg.sender,
+                account: to,
                 vault: vault,
                 amount: amount,
                 debtShare: debtShare,
@@ -242,9 +229,9 @@ contract UnbondedEvmos is IUnbondedEvmos, OwnableUpgradeable, ERC20Upgradeable {
     }
 
     // unlock all because of debt.
-    function unlock(uint256 minRepaid) public override {
+    function unlock() public override {
         LockedQueue storage lockedQueue = lockedOf[msg.sender];
-        _unlock(msg.sender, lockedQueue, minRepaid);
+        _unlock(msg.sender, lockedQueue);
     }
 
     function supplyUnbondedToken() payable public override {

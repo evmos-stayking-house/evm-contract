@@ -14,7 +14,7 @@ interface IUnbondedEvmos {
         uint256 debtShare
     ) external;
 
-    function unlock(uint256 minRepaid) external;
+    function unlock() external;
 
     function supplyUnbondedToken() payable external;
 

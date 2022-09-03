@@ -409,6 +409,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         /// This is because lending interest is charged during the 14 days of unbonding.
         pendingDebtShare = pendingDebtAmountToShare(amount);
         pendingDebtShareOf[user] += pendingDebtShare;
+
         totalPendingDebtShare += pendingDebtShare;
         totalPendingDebtAmount += amount;
     }
@@ -425,19 +426,25 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         return getBaseIn(getPendingDebt(user));
     }
 
-    /// @dev stayking should send with msg.value(= repayingDebt)
+    /// @dev stayking should send with msg.value(=repayingDebtInBase)
     function repayPendingDebt(
-        address user,
-        uint256 minRepaidDebt
-    ) public payable override onlyStayking returns(uint256 repaidDebtAmount) {
-        repaidDebtAmount = _swapFromBase(msg.value, minRepaidDebt);
-        uint256 repaidDebtShare = pendingDebtAmountToShare(repaidDebtAmount);
-        require(
-            repaidDebtShare <= pendingDebtShareOf[user],
-            "repayPendingDebt: too much msg.value to repay debt"
-        );
-        unchecked {
+        address user
+    ) public payable override returns(uint256 remained) {
+
+        uint256 pendingDebt = getPendingDebt(user);
+        uint256 pendingDebtInBase = getBaseIn(pendingDebt);
+        if(msg.value > pendingDebtInBase){
+            _swapFromBase(pendingDebtInBase, pendingDebt);
+            pendingDebtShareOf[user] = 0;
+            // return remained EVMOS
+            remained = msg.value - pendingDebtInBase;
+            SafeToken.safeTransferEVMOS(msg.sender, remained);
+        }
+        else {
+            uint256 repaidDebtAmount = _swapFromBase(msg.value, 1);
+            uint256 repaidDebtShare = pendingDebtAmountToShare(repaidDebtAmount);
             pendingDebtShareOf[user] -= repaidDebtShare;
+            remained = 0;
         }
     }
 

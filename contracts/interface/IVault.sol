@@ -76,7 +76,7 @@ interface IVault {
         uint256 amount
     ) external returns(uint256 pendingDebtShare);
 
-    function repayPendingDebt(address user, uint256 minRepaidDebt) payable external returns(uint256);
+    function repayPendingDebt(address user) payable external returns (uint256);
 
     function updateInterestModel(address newInterestModel) external;
     
