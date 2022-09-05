@@ -116,9 +116,9 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         });
     }
 
-    function lastAPR() public view returns(uint256) {
+    function lastAnnualRateBps() public view returns(uint256) {
         // 31536000 = 365 * 24 * 60 * 60
-        return 31536000 * lastPaid.reward / lastPaid.totalAmount / uint256(lastPaid.interval);
+        return 315360000000 * lastPaid.reward / lastPaid.totalAmount / uint256(lastPaid.interval);
     }
 
     // @dev (token in vault) + (debt)
