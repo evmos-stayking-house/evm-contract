@@ -20,13 +20,15 @@ interface IStayking {
     /// @dev min debtAmount in EVMOS (base token)
     function minDebtInBase() external view returns (uint256);
 
+    function reservedBps() external view returns(uint256);
+
+    function vaultRewardBps() external view returns(uint256);
+
     function killFactorBps() external view returns(uint256);
 
     function liquidateDebtFactorBps() external view returns(uint256);
 
     function liquidationFeeBps() external view returns(uint256);
-
-    function reservedBps() external view returns(uint256);
 
     function debtAmountOf (
         address user,

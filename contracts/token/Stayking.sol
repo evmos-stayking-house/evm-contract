@@ -28,7 +28,8 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     event UpdateVault(address token, address vault);
     event UpdateConfigs(
         uint256 minDebtInBase, 
-        uint256 reservedBps, 
+        uint256 reservedBps,
+        uint256 vaultRewardBps,
         uint256 killFactorBps, 
         uint256 liquidateDebtFactorBps,
         uint256 liquidationFeeBps
@@ -49,6 +50,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @dev min debtAmount in EVMOS (base token)
     uint256 public override minDebtInBase;
     uint256 public override reservedBps;
+    uint256 public override vaultRewardBps;
     uint256 public override killFactorBps;
     uint256 public override liquidateDebtFactorBps;
     uint256 public override liquidationFeeBps;
@@ -108,6 +110,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         updateConfigs(
             1e16,     // minDebtInBase (0.01EVMOS)
             3000,     // reservedBps
+            1000,     // vaultRewardBps
             7500,     // killFactorBps
             7500,     // liquidateDebtFactorBps
              500      // liquidationFeeBps
@@ -172,18 +175,21 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function updateConfigs(
         uint256 _minDebtInBase,
         uint256 _reservedBps,
+        uint256 _vaultRewardBps,
         uint256 _killFactorBps,
         uint256 _liquidateDebtFactorBps,
         uint256 _liquidationFeeBps
     ) public onlyOwner {
         minDebtInBase = _minDebtInBase;
         reservedBps = _reservedBps;
+        vaultRewardBps = _vaultRewardBps;
         killFactorBps = _killFactorBps;
         liquidateDebtFactorBps = _liquidateDebtFactorBps;
         liquidationFeeBps = _liquidationFeeBps;
         emit UpdateConfigs(
-            _minDebtInBase, 
-            _reservedBps, 
+            _minDebtInBase,
+            _reservedBps,
+            _vaultRewardBps,
             _killFactorBps,
             _liquidateDebtFactorBps,
             _liquidationFeeBps
@@ -644,62 +650,91 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             interest += IVault(vaults[i]).getInterestInBase();
         }
 
-        return reward - (reserved + interest);
+        if(reserved + interest >= reward){
+            return reward;
+        }
+        else {
+            return (reward - reserved - interest) * (1E4 - vaultRewardBps) / 1E4;
+        }
     }
 
-    /// @dev msg.value = all of staking reward 
-    /// @param totalStaked  current total staked EVMOS (except staking reward)
+    /**
+     @dev msg.value = all of staking reward 
+     @param totalStaked  current total staked EVMOS (except staking reward)
+     @notice kor) 수익 분배 순서
+        1. 프로토콜(Stayking) 매출
+          -> 전체 reward 중 (reservedBps / 100)% 만큼
+        2. Vault Interest(정규 이자 calc by interestModel)
+            (1) "전체 reward 중 N%"가 아닌 고정된 양이므로, 남은 reward로는 interest를 지급하지 못할 수 있다.     
+                이 경우, (전체 reward - 매출) 전량을 Vault Interest로 지급.
+            (2) 정상적인 경우 (매출을 제외한) reward가 Vault Interest보다 크다.
+        3. Vault reward / Reinvested Amount
+            2-(2)의 경우 reward에서 매출/이자를 제하고 남은 금액 중 (vaultRewardBps / 100)%는 
+            Vault에 보너스 reward로 지급하고, 나머지는 Reinvest한다.
+     */
     function accrue(
         uint256 totalStaked
     ) payable public onlyDelegator override {
-        require(totalStaked >= totalAmount, "totalStaked < before totalAmount");
+        require(totalStaked >= totalAmount, "accrue: totalStaked < before totalAmount");
+        require(msg.value > 0, "accrue: You should send claimed EVMOS.");
 
         // 1. distribute to Protocol
         uint256 reserved = msg.value * reservedBps / 1E4;
         reservedPool += reserved;
 
-        uint256 sumInterests = 0;
+        // 2. pay interest to vaults
+        uint256 sumOfInterests = 0;
         uint256 vaultsLength = vaults.length;
         /// @dev save interest for each vault
         uint256[] memory interestFor = new uint256[](vaultsLength);
         for(uint256 i = 0; i < vaultsLength; i++){
             interestFor[i] = IVault(vaults[i]).getInterestInBase();
-            sumInterests += interestFor[i];
+            sumOfInterests += interestFor[i];
         }
 
-        /// @dev most case, all of staking reward >= vault interests + reserved
         uint256 distributable = msg.value - reserved;
-        if(distributable >= sumInterests){
-            for(uint256 i = 0; i < vaultsLength; i++){
-                IVault(vaults[i]).payInterest{value: interestFor[i]}(
-                    IVault(vaults[i]).accInterest()
-                );
-            }
 
-            // return remained EVMOS to auto-compound
-            uint256 accrued = distributable - sumInterests;
-            totalAmount += accrued;
-
-            if(accrued > 0){
-                SafeToken.safeTransferEVMOS(msg.sender, accrued);
-            }
-
-            emit Accrue(msg.sender, accrued, totalAmount);
+        if(sumOfInterests == 0){ // no or tiny debt
+            totalAmount += distributable;
+            emit Accrue(msg.sender, distributable, totalAmount);
+            return;
         }
-    /**
-        @dev
-        else case is when the sum of interest for vaults is insufficient.
-        this case, totalAmount not changes (totalAmount = totalStaked)
-        */
-        else {  
+
+        // 2-(1): rewrad to repay interest for vaults is insufficient.
+        // this case, totalAmount not changes (totalAmount = totalStaked)
+        if(sumOfInterests >= distributable){
             for(uint256 i = 0; i < vaultsLength; i++){
                 IVault vault = IVault(vaults[i]);
-                uint256 interestInBase = interestFor[i] * distributable / sumInterests;
+                uint256 interestInBase = interestFor[i] * distributable / sumOfInterests;
                 uint256 minPaidInterest = vault.getTokenOut(interestInBase);
                 vault.payInterest{value: interestInBase}(minPaidInterest);
             }
 
             emit Accrue(msg.sender, 0, totalAmount);
+        }
+        // 2-(2)
+        else {
+            uint256 distributed = reserved;
+
+            // calculate bonus reward for Vaults
+            uint256 totalVaultReward = (distributable - sumOfInterests) * vaultRewardBps / 1E4;
+            for(uint256 i = 0; i < vaultsLength; i++){
+                // kor) 각 vault별 bonus양은 각 vault가 받는 이자수익의 양에 비례한다.
+                // assert sumOfInterests > 0
+                uint256 interestWithReward = interestFor[i] + (
+                    totalVaultReward * interestFor[i] / sumOfInterests
+                );
+                // value: accumulated interest + bonus reward
+                IVault(vaults[i]).payInterest{value: interestWithReward}(
+                    IVault(vaults[i]).accInterest()
+                );
+                distributed += interestWithReward;
+            }
+
+            uint256 accrued = msg.value - distributed;
+            totalAmount += accrued;
+
+            emit Accrue(msg.sender, accrued, totalAmount);
         }
     }
 
