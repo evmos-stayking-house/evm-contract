@@ -20,6 +20,7 @@ contract MockSwap is Ownable {
      */
 
     mapping(address => bool) public isSupported;
+    uint256 public EVMOSpriceBps;
 
     constructor (
         address[] memory tokens
@@ -27,17 +28,19 @@ contract MockSwap is Ownable {
         for (uint256 i = 0; i < tokens.length; i++) {
             isSupported[tokens[i]] = true;
         }
+
+        EVMOSpriceBps = 20000;
     }
 
     function getDx(
         address tokenX,
         address tokenY,
         uint256 dy
-    ) public pure returns (uint256) {
+    ) public view returns (uint256) {
         if(tokenX == address(0))
-            return dy / 2;
+            return dy * 1E4 / EVMOSpriceBps;
         else if(tokenY == address(0))
-            return dy * 2;
+            return dy * EVMOSpriceBps / 1E4;
         else
             return dy;
     }
@@ -46,11 +49,11 @@ contract MockSwap is Ownable {
         address tokenX,
         address tokenY,
         uint256 dx
-    ) public pure returns (uint256) {
+    ) public view returns (uint256) {
         if(tokenX == address(0))
-            return dx * 2;
+            return dx * EVMOSpriceBps / 1E4;
         else if(tokenY == address(0))
-            return dx / 2;
+            return dx * 1E4 / EVMOSpriceBps;
         else
             return dx;
     }
@@ -78,6 +81,13 @@ contract MockSwap is Ownable {
     // sweep in-contract EVMOS
     function sweep() public onlyOwner {
         SafeToken.safeTransferEVMOS(msg.sender, address(this).balance);
+    }
+
+    function changeRatio(
+        uint256 newRatio
+    ) public onlyOwner {
+        require(newRatio > 0, "newRatio <= 0");
+        EVMOSpriceBps = newRatio;
     }
 
     fallback() external payable {}
