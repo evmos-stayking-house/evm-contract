@@ -253,11 +253,11 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         return swapHelper.getDx(BASE_TOKEN, token, tokenOut);
     }
 
-    /// @dev calc $ EVMOS = (?)token
+    /// @dev calc $ token = (?)EVMOS
     function getBaseOut(
-        uint256 tokenIn
-    ) public override view returns(uint256 baseOut) {
-        return swapHelper.getDy(BASE_TOKEN, token, tokenIn);
+        uint256 baseIn
+    ) public override view returns(uint256 tokenOut) {
+        return swapHelper.getDy(token, BASE_TOKEN, baseIn);
     }
 
     /// @dev calc (?)token = $ EVMOS
@@ -266,13 +266,14 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     ) public override view returns(uint256 tokenIn) {
         return swapHelper.getDx(token, BASE_TOKEN, baseOut);
     }
-    
-    /// @dev calc $ token = (?)EVMOS
+
+    /// @dev calc $ EVMOS = (?)token
     function getTokenOut(
-        uint256 baseIn
-    ) public override view returns(uint256 tokenOut) {
-        return swapHelper.getDy(token, BASE_TOKEN, baseIn);
+        uint256 tokenIn
+    ) public override view returns(uint256 baseOut) {
+        return swapHelper.getDy(BASE_TOKEN, token, tokenIn);
     }
+
     
     /************************************
      * interface IVault Implementations

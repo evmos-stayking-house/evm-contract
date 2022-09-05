@@ -24,9 +24,15 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     // Operation Events
     event AddVault(address token, address vault);
-    event UpdateVault(address token, address vault);
-    event UpdateConfigs(uint256 minDebtInBase, uint256 reservedBps, uint256 killFactorBps, uint256 liquidateDebtFactorBps);
     event ChangeDelegator(address delegator);
+    event UpdateVault(address token, address vault);
+    event UpdateConfigs(
+        uint256 minDebtInBase, 
+        uint256 reservedBps, 
+        uint256 killFactorBps, 
+        uint256 liquidateDebtFactorBps,
+        uint256 liquidationFeeBps
+    );
 
     address public delegator;
     mapping(address => bool) public whitelistedKiller;
@@ -45,6 +51,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     uint256 public override reservedBps;
     uint256 public override killFactorBps;
     uint256 public override liquidateDebtFactorBps;
+    uint256 public override liquidationFeeBps;
 
     /// @dev EVMOS amount reserved by Protocol
     uint256 public reservedPool;
@@ -99,10 +106,11 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         // @TODO policy
         updateConfigs(
-            1e16,     // minDebtInBase (10EVMOS)
+            1e16,     // minDebtInBase (0.01EVMOS)
             3000,     // reservedBps
             7500,     // killFactorBps
-            7500      // liquidateDebtFactorBps
+            7500,     // liquidateDebtFactorBps
+             500      // liquidationFeeBps
         );
 
         uEVMOS = IUnbondedEvmos(uEVMOS_);
@@ -165,13 +173,30 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 _minDebtInBase,
         uint256 _reservedBps,
         uint256 _killFactorBps,
-        uint256 _liquidateDebtFactorBps
+        uint256 _liquidateDebtFactorBps,
+        uint256 _liquidationFeeBps
     ) public onlyOwner {
         minDebtInBase = _minDebtInBase;
         reservedBps = _reservedBps;
         killFactorBps = _killFactorBps;
         liquidateDebtFactorBps = _liquidateDebtFactorBps;
-        emit UpdateConfigs(_minDebtInBase, _reservedBps, _killFactorBps, _liquidateDebtFactorBps);
+        liquidationFeeBps = _liquidationFeeBps;
+        emit UpdateConfigs(
+            _minDebtInBase, 
+            _reservedBps, 
+            _killFactorBps,
+            _liquidateDebtFactorBps,
+            _liquidationFeeBps
+        );
+    }
+
+    function updateWhitelistedKillerStatus(
+        address[] calldata killers,
+        bool ok
+    ) external onlyOwner {
+        for (uint256 i = 0; i < killers.length; i++) {
+            whitelistedKiller[killers[i]] = ok;
+        }
     }
 
     /***********************
@@ -197,19 +222,21 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
      @param vault       owed by the user
      @param amount      unstaked amount
      @param repaidDebt  repaid amount in token
-     
+     @param fee         unstake fee for force liquidation(kill)
+
      @notice
-     kor) Unstake할 때, 가격변동 + 대출이자로 인해 빚이 늘어나는 것에 대비하여
-     자기자본도 일부 unstake해야 한다.
-     TODO 그 기준은 일단 killFactor로 한다.
+     kor) Unstake할 때, 가격변동 + 대출이자로 인해 빚이 늘어나는 것에 대비하여 자기자본도 일부 unstake해야 한다.
+     kor) fee > 0이면 uEVMOS를 unlock할 때 fee만큼은 Stayking 컨트랙트 명의로 달아놓는다.
      */
     function _unstake(
         Position storage p,
         address vault,
         uint256 amount,
-        uint256 repaidDebt
+        uint256 repaidDebt,
+        uint256 fee
     ) private {
         uint256 share = amountToShare(amount);
+
         p.share -= share;
         totalAmount -= amount;
         totalShare -= share;
@@ -219,20 +246,21 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uEVMOS.mintLockedToken(
             p.user,
             vault,
-            amount,
+            amount - fee,
             pendingDebtShare
         );
 
-        emit Unstake(delegator, p.user, amount, share);
-    }
+        if(fee > 0){
+            // Stayking에 대해 uEVMOS를 lock
+            uEVMOS.mintLockedToken(
+                address(this),
+                vault,
+                fee,
+                0
+            );
+        }
 
-    function _unstakeAll(
-        Position storage p,
-        address vault
-    ) private returns(uint256 amount){
-        uint256 debt = IVault(vault).debtAmountOf(p.user);
-        amount = shareToAmount(p.share);
-        _unstake(p, vault, amount, debt);
+        emit Unstake(delegator, p.user, amount, share);
     }
 
     function _isHealthy(
@@ -322,7 +350,15 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         /// @dev amount in EVMOS that user have to repay
         uint256 currentDebtInBase = IVault(vault).getBaseIn(debtAmount);
 
-        uint256 unstakedAmount = _unstakeAll(p, vault);
+        uint256 unstakedAmount = shareToAmount(p.share);
+        // unstake all
+        _unstake(p, vault, unstakedAmount, debtAmount, 0);
+
+        /**
+         kor)
+         유저가 스스로 포지션을 종료할 때, 
+         부채비율이 100% 이내인 경우만 포지션 종료 가능하도록 제한
+         */
         require(
             unstakedAmount >= currentDebtInBase,
             "removePosition: Bad debt"
@@ -354,8 +390,14 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             "equityInBaseChanged * debtInBaseChanged < 0"
         );
 
-        // equityInBaseChanged * debtInBaseChanged < 0 케이스 가능한 경우
-        // 불가능한 경우 repaidDebtChanged 고려하지 않아도 됨.
+        /**
+            @TODO
+            아래 if문은 equityInBaseChanged * debtInBaseChanged < 0 케이스 가능한 경우에 사용합니다. (아직 미완성)
+            바로 위 require문을 사용하게 되면
+            (equityInBaseChanged * debtInBaseChanged < 0인 케이스를 허용하지 않게 되면), 
+            아래 if문은 삭제하고 else문 내 로직만 사용하면 됩니다. 또한 그 경우에는 repaidDebtChanged값도 고려하지 않아도 됩니다.
+            그런 경우라면, 이 _adjustChangePositionArgs 함수 전체를 changePosition 함수에 넣는 게 좋을 것 같습니다.
+         */
         if(equityInBaseChanged * debtInBaseChanged < 0){        // current, unreachable
             bool isAddingEquity = equityInBaseChanged > 0;
             equity = uint256(abs(equityInBaseChanged));
@@ -383,30 +425,31 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
     /** @notice change position value
         case 1. equityInBaseChanged > 0 
-            - increase position value (call _stake function)
+            - increase position value (stake more)
             - decrease debt ratio
         case 2. equityInBaseChanged < 0 
-            - decrease position value (call _unstake function)
+            - decrease position value (partial close)
             - increase debt ratio
         case 3. debtInBaseChanged > 0 (borrow more debt)
-            - increase position value (call _stake function)
+            - increase position value (stake more)
             - increase debt ratio
         case 4. debtInBaseChanged < 0 (repay debt by unstaking)
-            - decrease position value (call _unstake function)
+            - decrease position value (partial)
             - decrease debt ratio
         case 5. repaidDebt > 0 or repaidDebtInBase > 0 (repay debt with user's own token/EVMOS) 
-            - position value not changes (not call _stake/_unstake function)
+            - position value not changes (not call stake/unstake function)
             - decrease debt ratio
         @dev repayDebtInBase = msg.value - changeEquityInBase
         @dev User should approve this first
         @dev if msg.value > 0, changeEquityInBase >= 0
              since msg.value = changeEquityInBase + repayDebtInBase
         @notice 
-        If equityInBaseChanged > 0 and debtInBaseChanged < 0, it is inefficient.
+        If equityInBaseChanged(=A) > 0 and debtInBaseChanged(=B) < 0, it is inefficient.
             e.g. A = 100 and B = -50, 50 EVMOS is Locked at uEVMOS.
             it produces the same result as if A = 50 and C = 50.
         (both increases equity by 50 EVMOS and repay debt by 50 EVMOS)
         Similarly, the case where equityInBaseChanged < 0 and debtInBaseChanged > 0 are also inefficient.
+        So, we revert all cases where equityInBaseChanged * debtInBaseChanged < 0.
      */
     function changePosition(
         address debtToken,
@@ -469,7 +512,8 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 p,
                 vault,
                 unstakedAmount,
-                IVault(vault).getBaseOut(debtInBase)
+                IVault(vault).getTokenOut(debtInBase),
+                0
             );
         }
 
@@ -509,11 +553,16 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         safety buffer: (kill factor) - (debt ratio)
      */
     function positionInfo(
-        address user,
+        address user, 
         address debtToken
-    ) public override view returns (uint256 positionValueInBase, uint256 debtInBase, uint256 debt) {
+    ) public override view returns (
+        uint256 positionValueInBase, 
+        uint256 debtInBase, 
+        uint256 debt,
+        uint256 positionId
+    ) {
         address vault = tokenToVault[debtToken];
-        uint256 positionId = positionIdOf[user][vault];
+        positionId = positionIdOf[user][vault];
         Position memory p = positions[vault][positionId];
 
         positionValueInBase = shareToAmount(p.share);
@@ -534,7 +583,8 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         (bool healthy, ) = _isHealthy(vault, p.share, debtAmountOf(p.user, vault));
         return !healthy;
     }
-
+                        
+    // if position is killed, fee will be charged.
     function kill(
         address debtToken,
         uint256 positionId
@@ -545,15 +595,33 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         uint256 debt = debtAmountOf(p.user, vault);
         (bool healthy, uint256 debtInBase) = _isHealthy(vault, p.share, debt);
-        require(healthy, "kill: still safe position.");
+        require(!healthy, "kill: still safe position.");
 
-        uint256 unstakedAmount = _unstakeAll(p, vault);
+        // unstaked amount
+        uint256 amount = shareToAmount(p.share);
+        uint256 liquidationFee = amount * liquidationFeeBps / 1E4;
+        /**
+         kor)
+         강제 청산 시, 일단 Stayking 컨트랙트에서 liquidationFee를 먼저 떼어가는 것으로 시작했습니다.
+         만약 liquidationFee = 5%인 경우, unstake된 이후 pend된 포지션에 대해 
+         부채비율이 95%만 넘어가도 lender가 손해를 보게 됩니다.
+         _unstake의 4번째 파라미터 값(전체 unstake 되는 양 중 부채가 차지하는 비율)과 
+         uEVMOS.mintLockedToken의 4번째 파라미터 값을 조정하여 이를 해소할 수 있습니다.
+         */
+        _unstake(
+            p, 
+            vault, 
+            amount, 
+            debt,
+            liquidationFee
+        );
+
 
         emit Kill(
             msg.sender,
             p.user,
             vault,
-            unstakedAmount - debtInBase,
+            amount - debtInBase,
             debtInBase,
             debt,
             p.share
