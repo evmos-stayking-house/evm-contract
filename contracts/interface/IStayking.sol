@@ -22,6 +22,8 @@ interface IStayking {
 
     function killFactorBps() external view returns(uint256);
 
+    function liquidateDebtFactorBps() external view returns(uint256);
+
     function reservedBps() external view returns(uint256);
 
     function debtAmountOf (
@@ -41,36 +43,37 @@ interface IStayking {
     /// @param debtToken    debtToken Address (not vault address)
     function removePosition(address debtToken) external;
 
-    /// @dev Borrow more debt (increase debt ratio)
-    /// @param debtToken    debtToken Address (not vault address)
-    /// @param extraDebtInBase  amount of additional debt in EVMOS
-    function addDebt(
-        address debtToken,
-        uint256 extraDebtInBase
-    ) external;
+    // deprecated
+    // /// @dev Borrow more debt (increase debt ratio)
+    // /// @param debtToken    debtToken Address (not vault address)
+    // /// @param extraDebtInBase  amount of additional debt in EVMOS
+    // function addDebt(
+    //     address debtToken,
+    //     uint256 extraDebtInBase
+    // ) external;
 
-    /// @dev Repay debt (decrease debt ratio)
-    /// @notice user should repay debt using debtToken
-    /// @notice user approve should be preceded
-    /// @param debtToken    debtToken Address (not vault address)
-    /// @param repaidDebt  amount of repaid debt in debtToken
-    function repayDebt(
-        address debtToken,
-        uint256 repaidDebt
-    ) external;
+    // /// @dev Repay debt (decrease debt ratio)
+    // /// @notice user should repay debt using debtToken
+    // /// @notice user approve should be preceded
+    // /// @param debtToken    debtToken Address (not vault address)
+    // /// @param repaidDebt  amount of repaid debt in debtToken
+    // function repayDebt(
+    //     address debtToken,
+    //     uint256 repaidDebt
+    // ) external;
 
-    function repayDebtInBase(
-        address debtToken,
-        uint256 minRepaid
-    ) payable external;
+    // function repayDebtInBase(
+    //     address debtToken,
+    //     uint256 minRepaid
+    // ) payable external;
 
-    /// @dev add additional equity (decrease debt ratio)
-    /// @param debtToken    debtToken Address (not vault address)
-    /// @param extraEquity  amount of additional equity
-    function addEquity(
-        address debtToken,
-        uint256 extraEquity
-    ) payable external;
+    // /// @dev add additional equity (decrease debt ratio)
+    // /// @param debtToken    debtToken Address (not vault address)
+    // /// @param extraEquity  amount of additional equity
+    // function addEquity(
+    //     address debtToken,
+    //     uint256 extraEquity
+    // ) payable external;
 
     function positionInfo(
         address user,
@@ -84,7 +87,7 @@ interface IStayking {
     /***********************
      * Only for Delegator *
      ***********************/
-    function getAccruedValue(uint256 totalStaked) external view returns(uint256);
+    function getAccruedValue(uint256 reward) external view returns(uint256);
     function accrue(uint256 totalStaked) payable external;
 
 }

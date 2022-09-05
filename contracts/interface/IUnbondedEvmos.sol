@@ -3,12 +3,6 @@ pragma solidity ^0.8.3;
 
 interface IUnbondedEvmos { 
 
-    function balanceOf(address account) external view returns (uint256);
-
-    function totalSupply() external view returns (uint256);
-
-    function totalAmount() external view returns (uint256);
-
     function lastUnbondedAt() external view returns (uint256);
 
     function unbondingInterval() external view returns (uint256);
@@ -20,7 +14,7 @@ interface IUnbondedEvmos {
         uint256 debtShare
     ) external;
 
-    function unlock(uint256 minRepaid) external;
+    function unlock() external;
 
     function supplyUnbondedToken() payable external;
 

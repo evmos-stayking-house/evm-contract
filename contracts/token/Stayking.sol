@@ -20,12 +20,12 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     event RemovePosition(address indexed user, address indexed vault, uint256 equity, uint256 debtInBase, uint256 debt, uint256 share);
     event PositionChanged(address indexed user, address indexed vault, uint256 amount, uint256 share, uint256 debt);
     event Kill(address indexed killer, address indexed user, address vault, uint256 equity, uint256 debtInBase, uint256 debt, uint256 share);
-    event Accrue(address indexed delegator, uint256 totalStaked, uint256 distributed);
+    event Accrue(address indexed delegator, uint256 accrued, uint256 totalStaked);
 
     // Operation Events
     event AddVault(address token, address vault);
     event UpdateVault(address token, address vault);
-    event UpdateConfigs(uint256 minDebtInBase, uint256 killFactorBps, uint256 reservedBps);
+    event UpdateConfigs(uint256 minDebtInBase, uint256 reservedBps, uint256 killFactorBps, uint256 liquidateDebtFactorBps);
     event ChangeDelegator(address delegator);
 
     address public delegator;
@@ -42,8 +42,9 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @dev min debtAmount in EVMOS (base token)
     uint256 public override minDebtInBase;
-    uint256 public override killFactorBps;
     uint256 public override reservedBps;
+    uint256 public override killFactorBps;
+    uint256 public override liquidateDebtFactorBps;
 
     /// @dev EVMOS amount reserved by Protocol
     uint256 public reservedPool;
@@ -90,14 +91,18 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address delegator_,
         address uEVMOS_
     ) external initializer {
+        // todo
+        liquidateDebtFactorBps = 10000;
+
         __Ownable_init();
         __ReentrancyGuard_init();
 
         // @TODO policy
         updateConfigs(
-            1e16,  // minDebtInBase (10EVMOS)
-            7500,    // killFactorBps
-            3000     // reservedBps
+            1e16,     // minDebtInBase (10EVMOS)
+            3000,     // reservedBps
+            7500,     // killFactorBps
+            7500      // liquidateDebtFactorBps
         );
 
         uEVMOS = IUnbondedEvmos(uEVMOS_);
@@ -158,13 +163,15 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function updateConfigs(
         uint256 _minDebtInBase,
+        uint256 _reservedBps,
         uint256 _killFactorBps,
-        uint256 _reservedBps
+        uint256 _liquidateDebtFactorBps
     ) public onlyOwner {
         minDebtInBase = _minDebtInBase;
-        killFactorBps = _killFactorBps;
         reservedBps = _reservedBps;
-        emit UpdateConfigs(_minDebtInBase, _killFactorBps, _reservedBps);
+        killFactorBps = _killFactorBps;
+        liquidateDebtFactorBps = _liquidateDebtFactorBps;
+        emit UpdateConfigs(_minDebtInBase, _reservedBps, _killFactorBps, _liquidateDebtFactorBps);
     }
 
     /***********************
@@ -202,18 +209,12 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 amount,
         uint256 repaidDebt
     ) private {
-        uint256 debtInBaseUnstaked = IVault(vault).getBaseIn(repaidDebt);
-        require(
-            debtInBaseUnstaked * 1E4 <= amount * killFactorBps,
-            "unstake: too much debt in unstaked EVMOS"
-        );
-
         uint256 share = amountToShare(amount);
         p.share -= share;
         totalAmount -= amount;
         totalShare -= share;
 
-        uint256 pendingDebtShare = IVault(vault).pendRepay(p.user, repaidDebt);
+        uint256 pendingDebtShare = repaidDebt > 0 ? IVault(vault).pendRepay(p.user, repaidDebt) : 0;
 
         uEVMOS.mintLockedToken(
             p.user,
@@ -339,120 +340,47 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         positionIdOf[msg.sender][vault] = 0; // kor) positionId 초기화
     }
 
-    /// @dev Borrow more debt (increase debt ratio)
-    /// @param debtToken    debtToken Address (not vault address)
-    /// @param extraDebtInBase  amount of additional debt in EVMOS
-    function addDebt(
-        address debtToken,
-        uint256 extraDebtInBase
-    ) public override {
-        require(extraDebtInBase > 0, "addDebt: extraDebtInBase <= 0");
-
-        address vault = tokenToVault[debtToken];
-        uint256 positionId = positionIdOf[msg.sender][vault];
-        require(positionId > 0, "addDebt: no position");
-
-        Position storage p = positions[vault][positionId];
-
-        // borrow token from vault
-        IVault(vault).loan(msg.sender, extraDebtInBase);
-        _stake(p, extraDebtInBase);
-
-        uint256 debtAmount = debtAmountOf(msg.sender, vault);
-        (bool healthy, ) = _isHealthy(vault, p.share, debtAmount);
-        require(healthy, "addDebt: bad debt, cannot add more debt anymore.");
-
-        emit PositionChanged(
-            msg.sender,
-            vault,
-            shareToAmount(p.share),
-            p.share,
-            debtAmount
-        );
-
+    function abs(int x) private pure returns (int) {
+        return x >= 0 ? x : -x;
     }
+    function _adjustChangePositionArgs(
+        int256 equityInBaseChanged,
+        int256 debtInBaseChanged
+    ) private pure returns (bool isStaking, uint256 equity, uint256 debtInBase, int256 repaidDebtChanged){
 
-    /// @dev Repay debt (decrease debt ratio, total staked amount(or share) does not change)
-    /// @notice user should repay debt using debtToken
-    /// @notice user approve should be preceded
-    /// @param debtToken    debtToken Address (not vault address)
-    /// @param repaidDebt  amount of repaid debt in debtToken
-    function repayDebt(
-        address debtToken,
-        uint256 repaidDebt
-    ) public override {
-        address vault = tokenToVault[debtToken];
-        uint256 positionId = positionIdOf[msg.sender][vault];
-        require(positionId > 0, "repayDebt: no position");
-
-        Position storage p = positions[vault][positionId];
-        uint256 debtAmount = debtAmountOf(msg.sender, vault);
-
-        SafeToken.safeTransferFrom(
-            debtToken,
-            msg.sender,
-            address(this),
-            repaidDebt
+        // kor) 논의 필요
+        require(
+            equityInBaseChanged * debtInBaseChanged >= 0, 
+            "equityInBaseChanged * debtInBaseChanged < 0"
         );
-        SafeToken.safeApprove(debtToken, vault, repaidDebt);
-        IVault(vault).repayInToken(msg.sender, repaidDebt);
 
-        emit PositionChanged(
-            msg.sender,
-            vault,
-            shareToAmount(p.share),
-            p.share,
-            debtAmount - repaidDebt
-        );
+        // equityInBaseChanged * debtInBaseChanged < 0 케이스 가능한 경우
+        // 불가능한 경우 repaidDebtChanged 고려하지 않아도 됨.
+        if(equityInBaseChanged * debtInBaseChanged < 0){        // current, unreachable
+            bool isAddingEquity = equityInBaseChanged > 0;
+            equity = uint256(abs(equityInBaseChanged));
+            debtInBase = uint256(abs(debtInBaseChanged));
+
+            (isStaking, equity, debtInBase, repaidDebtChanged) = equity > debtInBase ?
+                (
+                    isAddingEquity, 
+                    equity - debtInBase, 
+                    uint256(0), 
+                    isAddingEquity ? int(debtInBase) : -int(debtInBase)
+                ) :
+                (
+                    !isAddingEquity, 
+                    uint256(0), 
+                    debtInBase - equity, 
+                    isAddingEquity ? int(equity) : -int(equity)
+                );
+        }
+        else {
+            equity = uint256(abs(equityInBaseChanged));
+            debtInBase = uint256(abs(debtInBaseChanged));
+            isStaking = (equityInBaseChanged > 0 || debtInBaseChanged > 0);
+        }
     }
-
-    /// @dev Repay debt with EVMOS (decrease debt ratio, total staked amount(or share) does not change)
-    /// @param debtToken    debtToken Address (not vault address)
-    /// @param minRepaid    minimum value to be repaid
-    /// @notice repaidDebtInBase = msg.value
-    function repayDebtInBase(
-        address debtToken,
-        uint256 minRepaid
-    ) public payable override {
-        address vault = tokenToVault[debtToken];
-        uint256 positionId = positionIdOf[msg.sender][vault];
-        require(positionId > 0, "repayDebtInBase: no position");
-
-        Position storage p = positions[vault][positionId];
-        uint256 debtAmount = debtAmountOf(msg.sender, vault);
-        uint256 repaidDebt = IVault(vault).repayInBase{value: msg.value}(msg.sender, minRepaid);
-        emit PositionChanged(
-            msg.sender,
-            vault,
-            shareToAmount(p.share),
-            p.share,
-            debtAmount - repaidDebt
-        );
-    }
-
-
-    /// @dev add additional equity (decrease debt ratio)
-    /// @param debtToken    debtToken Address (not vault address)
-    /// @param extraEquity  amount of additional equity
-    function addEquity(
-        address debtToken,
-        uint256 extraEquity
-    ) payable public override {
-        address vault = tokenToVault[debtToken];
-        uint256 positionId = positionIdOf[msg.sender][vault];
-        require(positionId > 0, "addEquity: no position");
-        Position storage p = positions[vault][positionId];
-
-        _stake(p, extraEquity);
-        emit PositionChanged(
-            msg.sender,
-            vault,
-            shareToAmount(p.share),
-            p.share,
-            debtAmountOf(msg.sender, vault)
-        );
-    }
-
     /** @notice change position value
         case 1. equityInBaseChanged > 0 
             - increase position value (call _stake function)
@@ -475,9 +403,9 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
              since msg.value = changeEquityInBase + repayDebtInBase
         @notice 
         If equityInBaseChanged > 0 and debtInBaseChanged < 0, it is inefficient.
-            e.g. A = 100 and B = -50, it produces the same result as if A = 50 and C = 50.
+            e.g. A = 100 and B = -50, 50 EVMOS is Locked at uEVMOS.
+            it produces the same result as if A = 50 and C = 50.
         (both increases equity by 50 EVMOS and repay debt by 50 EVMOS)
-        However, former case requires more gas.
         Similarly, the case where equityInBaseChanged < 0 and debtInBaseChanged > 0 are also inefficient.
      */
     function changePosition(
@@ -490,9 +418,9 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 positionId = positionIdOf[msg.sender][vault];
         require(positionId > 0, "changePosition: no position");
 
+        Position storage p = positions[vault][positionId];
+
         uint256 repaidDebtInBase;
-        uint256 stakedAmount; // can added if equityInBaseChanged > 0 or  debtInBaseChanged > 0 (add equity or borrow more debt)
-        uint256 unstakedAmount;
         if(equityInBaseChanged >= 0){    // stake more with own equity
             require(
                 msg.value >= uint256(equityInBaseChanged), 
@@ -500,20 +428,49 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             );
             unchecked {
                 repaidDebtInBase = msg.value - uint256(equityInBaseChanged);
-                stakedAmount = uint256(equityInBaseChanged);
             }
         } 
-        else { // partial close position made up of equity
-            unstakedAmount = uint256(-equityInBaseChanged);
-            // repaidDebtInBase = 0
+
+        (
+            bool isStaking, 
+            uint256 equity, 
+            uint256 debtInBase, 
+            int256 repaidDebtChanged
+        ) = _adjustChangePositionArgs(equityInBaseChanged, debtInBaseChanged);
+
+        if(repaidDebtChanged >= 0){
+            repaidDebtInBase += uint256(repaidDebtChanged);
+        }
+        else {
+            if(repaidDebtInBase >= uint256(-repaidDebtChanged)){
+                repaidDebtInBase -= uint256(-repaidDebtChanged);
+            }
+            else {
+                repaidDebtInBase = 0;
+                repaidDebtChanged += int(repaidDebtInBase);
+            }
         }
 
-        if(debtInBaseChanged > 0){ // borrow more debt (stake more)
-            IVault(vault).loan(msg.sender, uint256(debtInBaseChanged));
-            stakedAmount += uint256(debtInBaseChanged);
+        if(isStaking){
+            if(debtInBase > 0){
+                IVault(vault).loan(msg.sender, debtInBase);
+            }
+            _stake(p, equity + debtInBase);
         }
-        else if(debtInBaseChanged < 0){ // partial close position made up of debt
-            unstakedAmount += uint256(-debtInBaseChanged);
+        else {
+            // TODO repaidDebtChanged ?
+            uint256 unstakedAmount = equity + debtInBase + (repaidDebtChanged < 0 ? uint256(-repaidDebtChanged) : 0);
+            require(
+                debtInBase * 1E4 <= unstakedAmount * liquidateDebtFactorBps,
+                "unstake: too much debt in unstaked EVMOS"
+            );
+
+             _unstake(
+                p,
+                vault,
+                unstakedAmount,
+                IVault(vault).getBaseOut(debtInBase)
+            );
         }
 
         /******************************************
@@ -527,23 +484,11 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             IVault(vault).repayInBase{value: repaidDebtInBase}(msg.sender, 1);
         }
 
-        Position storage p = positions[vault][positionId];
-        if(stakedAmount >= unstakedAmount){
-            _stake(p, stakedAmount - unstakedAmount);
-        } else {
-            _unstake(
-                p,
-                vault,
-                unstakedAmount - stakedAmount,
-                debtInBaseChanged < 0 ? 
-                    IVault(vault).getTokenOut(uint256(-debtInBaseChanged))
-                    : 0
-            );
+        {
+            uint256 debtAmount = debtAmountOf(msg.sender, vault);
+            (bool healthy, ) = _isHealthy(vault, p.share, debtAmount);
+            require(healthy, "changePosition: bad debt");
         }
-
-        uint256 debtAmount = debtAmountOf(msg.sender, vault);
-        (bool healthy, ) = _isHealthy(vault, p.share, debtAmount);
-        require(healthy, "changePosition: bad debt");
 
         emit PositionChanged(
             msg.sender,
@@ -580,13 +525,14 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function isKillable(
         address debtToken,
         uint256 positionId
-    ) public override view returns(bool healthy) {
+    ) public override view returns(bool) {
         address vault = tokenToVault[debtToken];
         Position memory p = positions[vault][positionId];
 
         if(p.share == 0)    /// @dev removed position
             return false;
-        (healthy, ) = _isHealthy(vault, p.share, debtAmountOf(p.user, vault));
+        (bool healthy, ) = _isHealthy(vault, p.share, debtAmountOf(p.user, vault));
+        return !healthy;
     }
 
     function kill(
@@ -618,11 +564,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /***********************
      * Only for Delegator *
      ***********************/
-    /// @param totalStaked  current total staked EVMOS (= last total amount + reward)
+    /// @param reward  claimed staking reward
     function getAccruedValue (
-        uint256 totalStaked
+        uint256 reward
     ) public view override returns(uint256) {
-        uint256 reward = totalStaked - totalAmount;
         uint256 reserved = reward * reservedBps / 1E4;
 
         uint256 vaultsLength = vaults.length;
@@ -631,17 +576,18 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             interest += IVault(vaults[i]).getInterestInBase();
         }
 
-        return reserved + interest;
+        return reward - (reserved + interest);
     }
 
     /// @dev msg.value = all of staking reward 
-    /// @param totalStaked  current total staked EVMOS before distributed
+    /// @param totalStaked  current total staked EVMOS (except staking reward)
     function accrue(
         uint256 totalStaked
     ) payable public onlyDelegator override {
+        require(totalStaked >= totalAmount, "totalStaked < before totalAmount");
 
         // 1. distribute to Protocol
-        uint256 reserved = (totalStaked - totalAmount) * reservedBps / 1E4;
+        uint256 reserved = msg.value * reservedBps / 1E4;
         reservedPool += reserved;
 
         uint256 sumInterests = 0;
@@ -662,20 +608,20 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 );
             }
 
-            totalAmount = totalStaked - reserved - sumInterests;
+            // return remained EVMOS to auto-compound
+            uint256 accrued = distributable - sumInterests;
+            totalAmount += accrued;
 
-            // return remained EVMOS
-            uint256 remained = msg.value - reserved - sumInterests;
-            if(remained > 0){
-                SafeToken.safeTransferEVMOS(msg.sender, remained);
+            if(accrued > 0){
+                SafeToken.safeTransferEVMOS(msg.sender, accrued);
             }
 
-            emit Accrue(msg.sender, totalStaked, reserved + sumInterests);
+            emit Accrue(msg.sender, accrued, totalAmount);
         }
     /**
         @dev
         else case is when the sum of interest for vaults is insufficient.
-        this case, totalAmount not changes
+        this case, totalAmount not changes (totalAmount = totalStaked)
         */
         else {  
             for(uint256 i = 0; i < vaultsLength; i++){
@@ -685,7 +631,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 vault.payInterest{value: interestInBase}(minPaidInterest);
             }
 
-            emit Accrue(msg.sender, totalStaked, msg.value);
+            emit Accrue(msg.sender, 0, totalAmount);
         }
     }
 

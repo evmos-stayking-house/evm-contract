@@ -17,6 +17,8 @@ interface IVault {
     
     function debtAmountInBase(address user) external view returns(uint256);
 
+    function totalStakedDebtAmount() external view returns(uint256);
+    
     function totalDebtAmount() external view returns(uint256);
 
     function accInterest() external view returns(uint256);
@@ -74,7 +76,7 @@ interface IVault {
         uint256 amount
     ) external returns(uint256 pendingDebtShare);
 
-    function repayPendingDebt(address user, uint256 minRepaidDebt) payable external returns(uint256);
+    function repayPendingDebt(address user) payable external returns (uint256);
 
     function updateInterestModel(address newInterestModel) external;
     
