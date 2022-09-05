@@ -21,14 +21,20 @@ interface IVault {
     
     function totalDebtAmount() external view returns(uint256);
 
+    function totalPendingDebtAmount() external view returns(uint256);
+
+    function totalPendingDebtShare() external view returns(uint256);
+
     function accInterest() external view returns(uint256);
+
+    function minReservedBps() external view returns(uint256);
+
+    function lastAccruedAt() external view returns(uint256);
 
     function utilizationRateBps() external view returns(uint256);
 
     /// @dev denominator = 1E18 
     function getInterestRate() external view returns(uint256);
-
-    function saveUtilizationRateBps() external;
 
     function deposit(uint256 amount) external returns(uint256 share);
 

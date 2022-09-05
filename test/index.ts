@@ -284,37 +284,9 @@ describe('EVMOS Hackathon Test', async () => {
 
             expect(userDebt.mul(1E4).div(totalLended.add(userDebt))).to.equal(ur);
         })
-
-        it("saves utilization rate on next day.", async function(){
-            const beforeYesterdayUR = await ibtUSDC.yesterdayUtilRate();
-
-            // 1. after 1 hour
-            await toNextHour()
-            await ibtUSDC.saveUtilizationRateBps();
-            // 1 hour later, yesterday util rate not changes
-            expect(await ibtUSDC.yesterdayUtilRate()).to.equal(beforeYesterdayUR)
-            
-            // 2. after +12 hours (after 1 day)
-            await timeTravel(43200);
-            await ibtUSDC.saveUtilizationRateBps();
-
-            // 1 day later, yesterday util rate changed
-            expect(await ibtUSDC.yesterdayUtilRate())
-                .to.equal(await ibtUSDC.utilizationRateBps());
-        })
     })
 
     describe("3. Lock uEVMOS", async function (){
-        // function toLocked(lock:UnbondedEvmos.LockedStructOutput){
-        //     return {
-        //         received: lock.received,
-        //         account: lock.account,
-        //         vault: lock.vault,
-        //         share: lock.share.toString(),
-        //         debtShare: lock.debtShare.toString(),
-        //         unlockedAt: new Date(lock.unlockedAt.toNumber() * 1000)
-        //     }
-        // }
         it("Remove Position", async function (){
             const [beforePosVaule, beforeDebtInBase, ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
             
@@ -526,7 +498,7 @@ describe('EVMOS Hackathon Test', async () => {
             await mockValidator.handleTx(tx);
 
             expect(await Stayking.totalAmount()).to.equal(mockValidator.amount);
-            expect(mockValidator.amount.sub(beforeStaked)).to.equal(expectedAccrued);
+            expect(mockValidator.amount.sub(beforeStaked)).to.approximately(expectedAccrued, toBN(1, 4));
         })
 
         it("After accrued, every position's debt ratio should be decreased", async function(){

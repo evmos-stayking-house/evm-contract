@@ -27,7 +27,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     // kor) Loan과 Repay는 Stayking의 ChangePosition 등의 이벤트와 중복되는데, 없애도 좋을지?
     event Loan(address user, uint256 debtAmount);
     event Repay(address user, uint256 debtAmount);
-    event PayInterest(uint256 paidInterest, uint256 leftInterest);
+    event PayInterest(uint256 paidInterest, uint256 reward);
     event TransferDebtOwnership(address from, address to, uint256 amount);
     event UtilizationRate(uint256 rateBps);
 
@@ -37,11 +37,10 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     address public override stayking;
     address public override interestModel;
 
-    /**
-        @dev
-        totalAmount == Token.balanceOf(this) + totalStakedDebtAmount + totalPendingDebtAmount
-        totalShare == totalSupply()
-     */
+    /** @dev
+    totalAmount == Token.balanceOf(this) + totalStakedDebtAmount + totalPendingDebtAmount
+    totalShare == totalSupply()
+    */
 
     // Debt Amounts
     mapping(address => uint256) public override debtAmountOf;
@@ -49,16 +48,24 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
     // Pending Debts
     mapping(address => uint256) public pendingDebtShareOf;
-    uint256 public totalPendingDebtShare;
-    uint256 public totalPendingDebtAmount;
+    uint256 public override totalPendingDebtShare;
+    uint256 public override totalPendingDebtAmount;
 
-    uint256 public minReservedBps;
-    uint256 public yesterdayUtilRate;
-    uint256 public lastSavedUtilizationRateTime;
-
-    uint256 public lastAccruedAt;
+    uint256 public override minReservedBps;
+    uint256 public override lastAccruedAt;
     uint256 public override accInterest;
 
+    // information of last paid interest amonut & time
+    // these 5 values change every day when interest is paid.
+    // APR = 365 * lastReward / lastTotalAmount;
+    struct LastPaid {
+        uint256 totalDebtAmount;
+        uint256 totalAmount;
+        uint256 reward;
+        uint128 timestamp;
+        uint128 interval;
+    }
+    LastPaid public lastPaid;
 
     /*************
      * Modifiers *
@@ -69,10 +76,9 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         _;
     }
 
-    modifier saveUtilRate() {
+    modifier accrueBefore() {
         _accrue();
         _;
-        saveUtilizationRateBps();
     }
 
     /****************
@@ -101,9 +107,18 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         updateInterestModel(_interestModel);
         updateSwapHelper(_swapHelper);
 
-        // @TODO changed
-        lastSavedUtilizationRateTime = block.timestamp - 
-            ((block.timestamp - 1639098000) % 1 days);
+        lastPaid = LastPaid({
+            totalDebtAmount: 0,
+            totalAmount: 0,
+            reward: 0,
+            timestamp: uint128(block.timestamp),
+            interval: uint128(0)
+        });
+    }
+
+    function lastAnnualRateBps() public view returns(uint256) {
+        // 31536000 = 365 * 24 * 60 * 60
+        return 315360000000 * lastPaid.reward / lastPaid.totalAmount / uint256(lastPaid.interval);
     }
 
     // @dev (token in vault) + (debt)
@@ -176,14 +191,14 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         return 1E4 * totalDebtAmount() / totalAmount();
     }
 
-    function saveUtilizationRateBps() public override {
-        if (block.timestamp >= lastSavedUtilizationRateTime + 1 days) {
-            yesterdayUtilRate = utilizationRateBps();
-            lastSavedUtilizationRateTime += 1 days;
-            // accInterest += getInterestRate() * 86400;
-            emit UtilizationRate(yesterdayUtilRate);
-        }
-    }
+    // function saveUtilizationRateBps() public override {
+    //     if (block.timestamp >= lastSavedUtilizationRateTime + 1 days) {
+    //         yesterdayUtilRate = utilizationRateBps();
+    //         lastSavedUtilizationRateTime += 1 days;
+    //         // accInterest += getInterestRate() * 86400;
+    //         emit UtilizationRate(yesterdayUtilRate);
+    //     }
+    // }
 
     /**
         @dev 
@@ -282,7 +297,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     /// @notice user approve should be preceded
     function deposit(
         uint256 amount
-    ) public override saveUtilRate returns(uint256 share){
+    ) public override accrueBefore returns(uint256 share){
         share = amountToShare(amount);
         SafeToken.safeTransferFrom(token, msg.sender, address(this), amount);
         _mint(msg.sender, share);
@@ -292,7 +307,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
     function withdraw(
         uint256 share
-    ) public override saveUtilRate returns(uint256 amount){
+    ) public override accrueBefore returns(uint256 amount){
         amount = shareToAmount(share);
         // TODO minReserved?
         _burn(msg.sender, share);
@@ -305,7 +320,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     function loan(
         address user,
         uint256 debtInBase
-    ) public override onlyStayking saveUtilRate returns (uint256 debt) {
+    ) public override onlyStayking accrueBefore returns (uint256 debt) {
         require(user != address(0), "loan: zero address cannot loan.");
 
         ///@dev swap token -> (amountInBase)EVMOS
@@ -328,7 +343,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     function _repay(
         address user,
         uint256 amount
-    ) private saveUtilRate {
+    ) private accrueBefore {
         require(debtAmountOf[user] >= amount, "repay: too much amount to repay.");
         unchecked {
             debtAmountOf[user] -= amount;
@@ -373,24 +388,29 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         return accInterest > 0 ? getBaseIn(accInterest) : 0;
     }
 
+    // msg.value = interest + reward(bonus)
     function payInterest(
         uint256 minPaidInterest
-    ) public payable override onlyStayking saveUtilRate {
-        uint256 interestInBase = getInterestInBase();
-        uint256 paidInterest;
-        
-        if(msg.value > interestInBase){
-            paidInterest = _swapFromBase(interestInBase, accInterest);
-            // return remained EVMOS
-            SafeToken.safeTransferEVMOS(msg.sender, msg.value - interestInBase);
-            accInterest -= paidInterest;
+    ) public payable override onlyStayking accrueBefore {
+        require(block.timestamp > uint256(lastPaid.timestamp), "payInterest: already paid.");
+        uint256 paidInterest = _swapFromBase(msg.value, minPaidInterest);
+
+        lastPaid.totalDebtAmount = totalDebtAmount();
+        lastPaid.totalAmount = totalAmount();
+        lastPaid.interval = uint128(block.timestamp) - lastPaid.timestamp;
+        lastPaid.timestamp = uint128(block.timestamp);
+        lastPaid.reward = paidInterest;
+
+        if(paidInterest > accInterest){
+            // reward = paidInterest - accInterest
+            emit PayInterest(accInterest, paidInterest - accInterest);
+
+            accInterest = 0;
         }
         else {
-            paidInterest = _swapFromBase(msg.value, minPaidInterest);
             accInterest -= paidInterest;
+            emit PayInterest(paidInterest, 0);
         }
-
-        emit PayInterest(paidInterest, accInterest);
     }
 
     /// @dev pending repay debt because of EVMOS Unstaking's 14 days lock.
@@ -431,7 +451,6 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     function repayPendingDebt(
         address user
     ) public payable override returns(uint256 remained) {
-
         uint256 pendingDebt = getPendingDebt(user);
         uint256 pendingDebtInBase = getBaseIn(pendingDebt);
         if(msg.value > pendingDebtInBase){
