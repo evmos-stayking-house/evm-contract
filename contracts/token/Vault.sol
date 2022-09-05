@@ -117,6 +117,9 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     }
 
     function lastAnnualRateBps() public view returns(uint256) {
+        if(lastPaid.totalAmount == 0 || uint256(lastPaid.interval) == 0){
+            return 0;
+        }
         // 31536000 = 365 * 24 * 60 * 60
         return 315360000000 * lastPaid.reward / lastPaid.totalAmount / uint256(lastPaid.interval);
     }
