@@ -54,16 +54,18 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     uint256 public override minReservedBps;
     uint256 public override lastAccruedAt;
     uint256 public override accInterest;
-    
-    // uint256 public yesterdayUtilRate;
-    // uint256 public lastSavedUtilizationRateTime;
 
-    // these 4 values change every day when interest is paid.
+    // information of last paid interest amonut & time
+    // these 5 values change every day when interest is paid.
     // APR = 365 * lastReward / lastTotalAmount;
-    uint256 public lastTotalDebtAmount;
-    uint256 public lastTotalAmount;
-    uint256 public lastReward;
-    uint256 public lastInterestPaid;
+    struct LastPaid {
+        uint256 totalDebtAmount;
+        uint256 totalAmount;
+        uint256 reward;
+        uint128 timestamp;
+        uint128 interval;
+    }
+    LastPaid public lastPaid;
 
     /*************
      * Modifiers *
@@ -77,7 +79,6 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     modifier accrueBefore() {
         _accrue();
         _;
-        // saveUtilizationRateBps();
     }
 
     /****************
@@ -106,9 +107,18 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         updateInterestModel(_interestModel);
         updateSwapHelper(_swapHelper);
 
-        // // @TODO changed
-        // lastSavedUtilizationRateTime = block.timestamp - 
-        //     ((block.timestamp - 1639098000) % 1 days);
+        lastPaid = LastPaid({
+            totalDebtAmount: 0,
+            totalAmount: 0,
+            reward: 0,
+            timestamp: uint128(block.timestamp),
+            interval: uint128(0)
+        });
+    }
+
+    function lastAPR() public view returns(uint256) {
+        // 31536000 = 365 * 24 * 60 * 60
+        return 31536000 * lastPaid.reward / lastPaid.totalAmount / uint256(lastPaid.interval);
     }
 
     // @dev (token in vault) + (debt)
@@ -382,12 +392,14 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     function payInterest(
         uint256 minPaidInterest
     ) public payable override onlyStayking accrueBefore {
+        require(block.timestamp > uint256(lastPaid.timestamp), "payInterest: already paid.");
         uint256 paidInterest = _swapFromBase(msg.value, minPaidInterest);
 
-        lastTotalDebtAmount = totalDebtAmount();
-        lastTotalAmount = totalAmount();
-        lastInterestPaid = block.timestamp;
-        lastReward = paidInterest;
+        lastPaid.totalDebtAmount = totalDebtAmount();
+        lastPaid.totalAmount = totalAmount();
+        lastPaid.interval = uint128(block.timestamp) - lastPaid.timestamp;
+        lastPaid.timestamp = uint128(block.timestamp);
+        lastPaid.reward = paidInterest;
 
         if(paidInterest > accInterest){
             // reward = paidInterest - accInterest

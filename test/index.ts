@@ -498,7 +498,7 @@ describe('EVMOS Hackathon Test', async () => {
             await mockValidator.handleTx(tx);
 
             expect(await Stayking.totalAmount()).to.equal(mockValidator.amount);
-            expect(mockValidator.amount.sub(beforeStaked)).to.equal(expectedAccrued);
+            expect(mockValidator.amount.sub(beforeStaked)).to.approximately(expectedAccrued, toBN(1, 4));
         })
 
         it("After accrued, every position's debt ratio should be decreased", async function(){
