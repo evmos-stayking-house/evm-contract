@@ -24,6 +24,8 @@ interface IStayking {
 
     function liquidateDebtFactorBps() external view returns(uint256);
 
+    function liquidationFeeBps() external view returns(uint256);
+
     function reservedBps() external view returns(uint256);
 
     function debtAmountOf (
@@ -43,42 +45,10 @@ interface IStayking {
     /// @param debtToken    debtToken Address (not vault address)
     function removePosition(address debtToken) external;
 
-    // deprecated
-    // /// @dev Borrow more debt (increase debt ratio)
-    // /// @param debtToken    debtToken Address (not vault address)
-    // /// @param extraDebtInBase  amount of additional debt in EVMOS
-    // function addDebt(
-    //     address debtToken,
-    //     uint256 extraDebtInBase
-    // ) external;
-
-    // /// @dev Repay debt (decrease debt ratio)
-    // /// @notice user should repay debt using debtToken
-    // /// @notice user approve should be preceded
-    // /// @param debtToken    debtToken Address (not vault address)
-    // /// @param repaidDebt  amount of repaid debt in debtToken
-    // function repayDebt(
-    //     address debtToken,
-    //     uint256 repaidDebt
-    // ) external;
-
-    // function repayDebtInBase(
-    //     address debtToken,
-    //     uint256 minRepaid
-    // ) payable external;
-
-    // /// @dev add additional equity (decrease debt ratio)
-    // /// @param debtToken    debtToken Address (not vault address)
-    // /// @param extraEquity  amount of additional equity
-    // function addEquity(
-    //     address debtToken,
-    //     uint256 extraEquity
-    // ) payable external;
-
     function positionInfo(
         address user,
         address vault
-    ) external view returns (uint256 equityInBase, uint256 debtInBase, uint256 debt);
+    ) external view returns (uint256 equityInBase, uint256 debtInBase, uint256 debt, uint256 positionId);
 
     function isKillable(address debtToken, uint256 positionId) external view returns(bool);
     
