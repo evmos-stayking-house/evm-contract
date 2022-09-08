@@ -181,6 +181,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
             (totalPendingDebtAmount * share) / totalPendingDebtShare;
     }
 
+    /// @notice Amount of interest paid per second
     /// @dev denominator = 1E18 
     function getInterestRate() public override view returns(uint256 interestRate){
         interestRate = IInterestModel(interestModel)

@@ -732,7 +732,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             }
 
             uint256 accrued = msg.value - distributed;
-            totalAmount += accrued;
+            if(accrued > 0){
+                totalAmount += accrued;
+                SafeToken.safeTransferEVMOS(msg.sender, accrued);
+            }
 
             emit Accrue(msg.sender, accrued, totalAmount);
         }
