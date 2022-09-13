@@ -34,7 +34,7 @@ async function deployTestnetWithMockswap() {
 
     // Deploy MockSwap & MockSwapHelper
     // set evmos_supply here
-    const swapHelper = await deployMockSwap(deployer, [mockUSDC], 300);
+    const swapHelper = await deployMockSwap(deployer, [mockUSDC], 200);
 
     const interestModel = await deployTripleSlopeModel(deployer);
 
@@ -43,7 +43,7 @@ async function deployTestnetWithMockswap() {
     const Stayking = await deployStayking(deployer.address, delegator.address, uEVMOS.address);
 
     await uEVMOS.updateMinterStatus(Stayking.address, true);
-    
+
     const ibmockUSDC = await deployVault(
         deployer,
         Stayking,

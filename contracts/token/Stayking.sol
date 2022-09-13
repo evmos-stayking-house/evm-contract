@@ -27,10 +27,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     event ChangeDelegator(address delegator);
     event UpdateVault(address token, address vault);
     event UpdateConfigs(
-        uint256 minDebtInBase, 
+        uint256 minDebtInBase,
         uint256 reservedBps,
         uint256 vaultRewardBps,
-        uint256 killFactorBps, 
+        uint256 killFactorBps,
         uint256 liquidateDebtFactorBps,
         uint256 liquidationFeeBps
     );
@@ -118,6 +118,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         uEVMOS = IUnbondedEvmos(uEVMOS_);
         changeDelegator(delegator_);
+        whitelistedKiller[delegator_] = true;
     }
 
     /**********************
@@ -321,7 +322,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         // borrow token from vault
         // debtInBase == 0 -> 1x leverage
-        uint256 debt = debtInBase > 0 ? 
+        uint256 debt = debtInBase > 0 ?
             IVault(vault).loan(msg.sender, debtInBase) : 0;
 
         positions[vault].push(
@@ -362,7 +363,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         /**
          kor)
-         유저가 스스로 포지션을 종료할 때, 
+         유저가 스스로 포지션을 종료할 때,
          부채비율이 100% 이내인 경우만 포지션 종료 가능하도록 제한
          */
         require(
@@ -392,7 +393,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         // kor) 논의 필요
         require(
-            equityInBaseChanged * debtInBaseChanged >= 0, 
+            equityInBaseChanged * debtInBaseChanged >= 0,
             "equityInBaseChanged * debtInBaseChanged < 0"
         );
 
@@ -400,7 +401,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             @TODO
             아래 if문은 equityInBaseChanged * debtInBaseChanged < 0 케이스 가능한 경우에 사용합니다. (아직 미완성)
             바로 위 require문을 사용하게 되면
-            (equityInBaseChanged * debtInBaseChanged < 0인 케이스를 허용하지 않게 되면), 
+            (equityInBaseChanged * debtInBaseChanged < 0인 케이스를 허용하지 않게 되면),
             아래 if문은 삭제하고 else문 내 로직만 사용하면 됩니다. 또한 그 경우에는 repaidDebtChanged값도 고려하지 않아도 됩니다.
             그런 경우라면, 이 _adjustChangePositionArgs 함수 전체를 changePosition 함수에 넣는 게 좋을 것 같습니다.
          */
@@ -411,15 +412,15 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
             (isStaking, equity, debtInBase, repaidDebtChanged) = equity > debtInBase ?
                 (
-                    isAddingEquity, 
-                    equity - debtInBase, 
-                    uint256(0), 
+                    isAddingEquity,
+                    equity - debtInBase,
+                    uint256(0),
                     isAddingEquity ? int(debtInBase) : -int(debtInBase)
                 ) :
                 (
-                    !isAddingEquity, 
-                    uint256(0), 
-                    debtInBase - equity, 
+                    !isAddingEquity,
+                    uint256(0),
+                    debtInBase - equity,
                     isAddingEquity ? int(equity) : -int(equity)
                 );
         }
@@ -430,10 +431,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
     }
     /** @notice change position value
-        case 1. equityInBaseChanged > 0 
+        case 1. equityInBaseChanged > 0
             - increase position value (stake more)
             - decrease debt ratio
-        case 2. equityInBaseChanged < 0 
+        case 2. equityInBaseChanged < 0
             - decrease position value (partial close)
             - increase debt ratio
         case 3. debtInBaseChanged > 0 (borrow more debt)
@@ -442,14 +443,14 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         case 4. debtInBaseChanged < 0 (repay debt by unstaking)
             - decrease position value (partial)
             - decrease debt ratio
-        case 5. repaidDebt > 0 or repaidDebtInBase > 0 (repay debt with user's own token/EVMOS) 
+        case 5. repaidDebt > 0 or repaidDebtInBase > 0 (repay debt with user's own token/EVMOS)
             - position value not changes (not call stake/unstake function)
             - decrease debt ratio
         @dev repayDebtInBase = msg.value - changeEquityInBase
         @dev User should approve this first
         @dev if msg.value > 0, changeEquityInBase >= 0
              since msg.value = changeEquityInBase + repayDebtInBase
-        @notice 
+        @notice
         If equityInBaseChanged(=A) > 0 and debtInBaseChanged(=B) < 0, it is inefficient.
             e.g. A = 100 and B = -50, 50 EVMOS is Locked at uEVMOS.
             it produces the same result as if A = 50 and C = 50.
@@ -472,18 +473,18 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 repaidDebtInBase;
         if(equityInBaseChanged >= 0){    // stake more with own equity
             require(
-                msg.value >= uint256(equityInBaseChanged), 
+                msg.value >= uint256(equityInBaseChanged),
                 "changePosition: Not enough msg.value"
             );
             unchecked {
                 repaidDebtInBase = msg.value - uint256(equityInBaseChanged);
             }
-        } 
+        }
 
         (
-            bool isStaking, 
-            uint256 equity, 
-            uint256 debtInBase, 
+            bool isStaking,
+            uint256 equity,
+            uint256 debtInBase,
             int256 repaidDebtChanged
         ) = _adjustChangePositionArgs(equityInBaseChanged, debtInBaseChanged);
 
@@ -559,11 +560,11 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         safety buffer: (kill factor) - (debt ratio)
      */
     function positionInfo(
-        address user, 
+        address user,
         address debtToken
     ) public override view returns (
-        uint256 positionValueInBase, 
-        uint256 debtInBase, 
+        uint256 positionValueInBase,
+        uint256 debtInBase,
         uint256 debt,
         uint256 positionId
     ) {
@@ -589,7 +590,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         (bool healthy, ) = _isHealthy(vault, p.share, debtAmountOf(p.user, vault));
         return !healthy;
     }
-                        
+
     // if position is killed, fee will be charged.
     function kill(
         address debtToken,
@@ -609,15 +610,15 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         /**
          kor)
          강제 청산 시, 일단 Stayking 컨트랙트에서 liquidationFee를 먼저 떼어가는 것으로 시작했습니다.
-         만약 liquidationFee = 5%인 경우, unstake된 이후 pend된 포지션에 대해 
+         만약 liquidationFee = 5%인 경우, unstake된 이후 pend된 포지션에 대해
          부채비율이 95%만 넘어가도 lender가 손해를 보게 됩니다.
-         _unstake의 4번째 파라미터 값(전체 unstake 되는 양 중 부채가 차지하는 비율)과 
+         _unstake의 4번째 파라미터 값(전체 unstake 되는 양 중 부채가 차지하는 비율)과
          uEVMOS.mintLockedToken의 4번째 파라미터 값을 조정하여 이를 해소할 수 있습니다.
          */
         _unstake(
-            p, 
-            vault, 
-            amount, 
+            p,
+            vault,
+            amount,
             debt,
             liquidationFee
         );
@@ -633,6 +634,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             p.share
         );
 
+        positionIdOf[p.user][vault] = 0; // kor) positionId 초기화
     }
 
     /***********************
@@ -659,17 +661,17 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     @dev msg.value = all of staking reward 
+     @dev msg.value = all of staking reward
      @param totalStaked  current total staked EVMOS (except staking reward)
      @notice kor) 수익 분배 순서
         1. 프로토콜(Stayking) 매출
           -> 전체 reward 중 (reservedBps / 100)% 만큼
         2. Vault Interest(정규 이자 calc by interestModel)
-            (1) "전체 reward 중 N%"가 아닌 고정된 양이므로, 남은 reward로는 interest를 지급하지 못할 수 있다.     
+            (1) "전체 reward 중 N%"가 아닌 고정된 양이므로, 남은 reward로는 interest를 지급하지 못할 수 있다.
                 이 경우, (전체 reward - 매출) 전량을 Vault Interest로 지급.
             (2) 정상적인 경우 (매출을 제외한) reward가 Vault Interest보다 크다.
         3. Vault reward / Reinvested Amount
-            2-(2)의 경우 reward에서 매출/이자를 제하고 남은 금액 중 (vaultRewardBps / 100)%는 
+            2-(2)의 경우 reward에서 매출/이자를 제하고 남은 금액 중 (vaultRewardBps / 100)%는
             Vault에 보너스 reward로 지급하고, 나머지는 Reinvest한다.
      */
     function accrue(

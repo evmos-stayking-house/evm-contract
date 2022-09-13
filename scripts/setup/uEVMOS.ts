@@ -3,10 +3,10 @@ import { craftform } from "hardhat"
 
 export const deployuEVMOS = (deployer: SignerWithAddress) => {
     // @TODO maybe 16 days?
-    const unbondingInterval = 16 * 24 * 60 * 60;
+    const unbondingInterval = 7 * 24 * 60 * 60;
 
     return craftform.contract("UnbondedEvmos")
-        .deploy(null, 
+        .deploy(null,
             {
                 from: deployer.address,
                 proxy: {
