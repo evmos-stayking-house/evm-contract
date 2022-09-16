@@ -25,7 +25,7 @@
    - `TripleSlopeModel`
        Contract for calculating the interest cost of the Vault. It is not intended to be used directly by the web client.
    - `Stayking` Contract for Leverage Staking
-   - `Vault` Contract for lending or depositing Mock USDC for Leverage Staking
+   - `Vault` Contract for lending or borrowing Mock USDC for Leverage Staking
    - `UnbondedEvmos` uEVMOS token contract that allows future claims to be paid to users during unbonding
 
 
