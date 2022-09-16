@@ -743,6 +743,18 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
     }
 
+    function claimReserves(
+        address token,
+        uint256 amount
+    ) external onlyOwner {
+        if(token == address(0)){
+            SafeToken.safeTransferEVMOS(owner(), amount);
+        }
+        else {
+            SafeToken.safeTransfer(token, owner(), amount);
+        }
+    }
+
     /// @dev Fallback function to accept EVMOS.
     receive() external payable {}
 

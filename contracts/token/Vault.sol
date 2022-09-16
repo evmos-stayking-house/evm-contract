@@ -21,6 +21,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
     address private constant BASE_TOKEN = address(0);
     uint256 private constant DENOM = 1E18;
+    uint256 private constant YEAR_TOTAL_SECONDS = 315360000000;
 
     event Deposit(address user, uint256 amount, uint256 share);
     event Withdraw(address user, uint256 amount, uint256 share);
