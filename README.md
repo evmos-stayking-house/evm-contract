@@ -24,30 +24,25 @@
      Only EVMOS, tATOM, tUSDC, and tUSDT are supported. The replacement fee is 1 EVMOS = 2tATOM = 2tUSDC = 2tUSDT.
    - `TripleSlopeModel`
        Contract for calculating the interest cost of the Vault. It is not intended to be used directly by the web client.
-   - `Stayking`
-   - `Vault`
+   - `Stayking` Contract for Leverage Staking
+   - `Vault` Contract for lending or depositing Mock USDC for Leverage Staking
+   - `UnbondedEvmos` uEVMOS token contract that allows future claims to be paid to users during unbonding
 
 
 ## Deployed Testnet Node
 
 ```
-    [mockUSDC] : Mock USDC token contract to be used in Vault
-    address: 0x9218b75D53612212137890354B1a16163Abb9DE3
+    [mockUSDC] 0x9218b75D53612212137890354B1a16163Abb9DE3
     
-    [MockSwap]: EVMOS and Mock USDC Token Swap Contract (Ratio Manual Management)
-    address: 0x08Be1FDf4A512fc6caA7aE1Be029b922d05EA5B3
+    [MockSwap] 0x08Be1FDf4A512fc6caA7aE1Be029b922d05EA5B3
     
-    [TripleSlopeModel]: Contract for calculating interest in Vault
-    address: 0x739DDcC9e458bD0A88c0882aca7BB72EaFff8781
+    [TripleSlopeModel] 0x739DDcC9e458bD0A88c0882aca7BB72EaFff8781
     
-    [UnbondedEvmos]: uEVMOS token contract that allows future claims to be paid to users during unbonding
-    address: 0xedB25Fee105C80Ab43235e016962ffd29Fe616bC
+    [UnbondedEvmos] 0xedB25Fee105C80Ab43235e016962ffd29Fe616bC
     
-    [Stayking]: Stayking Contract for Leverage Staking (Key)
-    address: 0x18A1Af12338d5a0fFF6aADb4364dBd8efF58f3f6
+    [Stayking] 0x18A1Af12338d5a0fFF6aADb4364dBd8efF58f3f6
     
-    [Vault]: Contract for lending or depositing Mock USDC for Leverage Staking
-    address: 0x33061E03aa8082d03f0aA66cDCf8159c976fc806
+    [Vault] 0x33061E03aa8082d03f0aA66cDCf8159c976fc806
 ```
 
 ## Terms
