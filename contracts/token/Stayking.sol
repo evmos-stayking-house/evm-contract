@@ -42,10 +42,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     address[] public vaults;
 
     /// @dev kor) 유저가 예치한 금액 + auto-compound된 금액
-    uint256 public totalAmount;
+    uint256 public override totalAmount;
     /// @dev kor) auto-compound되어도 totalShare는 변하지 않음.
     ///  유저는 예치하는 시점에 (예치 금액/totalAmount) * totalShare에 해당하는 share를 받음.
-    uint256 public totalShare;
+    uint256 public override totalShare;
 
     /// @dev min debtAmount in EVMOS (base token)
     uint256 public override minDebtInBase;

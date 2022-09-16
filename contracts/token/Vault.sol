@@ -5,6 +5,7 @@ import "hardhat/console.sol";
 import "../interface/IVault.sol";
 import "../interface/IInterestModel.sol";
 import "../interface/ISwapHelper.sol";
+import "../interface/IStayking.sol";
 import "../lib/ERC20Upgradeable.sol";
 import "../lib/OwnableUpgradeable.sol";
 import "../lib/interface/IERC20.sol";
@@ -117,12 +118,24 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         });
     }
 
+    // TODO removed
     function lastAnnualRateBps() public view returns(uint256) {
         if(lastPaid.totalAmount == 0 || uint256(lastPaid.interval) == 0){
             return 0;
         }
         // 31536000 = 365 * 24 * 60 * 60
         return 315360000000 * lastPaid.reward / lastPaid.totalAmount / uint256(lastPaid.interval);
+    }
+
+    function getAccruedRateBps() public view returns(uint256 baseBps, uint256 bonusBps){
+        uint256 amount = totalAmount();
+        if(amount == 0){
+            return (0, 0);
+        }
+
+        baseBps = 1E4 * getInterestRate() * 365 days / amount;
+        bonusBps = getBaseIn(totalStakedDebtAmount) * IStayking(stayking).vaultRewardBps() 
+            / IStayking(stayking).totalAmount();
     }
 
     // @dev (token in vault) + (debt)
@@ -193,7 +206,11 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     }
 
     function utilizationRateBps() public override view returns(uint256){
-        return 1E4 * totalDebtAmount() / totalAmount();
+        uint256 amount = totalAmount();
+        if(amount == 0)
+            return 0;
+        
+        return 1E4 * totalDebtAmount() / amount;
     }
 
     // function saveUtilizationRateBps() public override {

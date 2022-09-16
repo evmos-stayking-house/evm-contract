@@ -4,5 +4,11 @@
     "address": "0xedB25Fee105C80Ab43235e016962ffd29Fe616bC",
     "version": 0,
     "deployedAt": 1663080387
+  },
+  {
+    "alias": "UnbondedEvmos",
+    "address": "0x20E3f88438ef008256BA40e5D265fb49ADc7fBeF",
+    "version": 1,
+    "deployedAt": 1663331843
   }
 ]

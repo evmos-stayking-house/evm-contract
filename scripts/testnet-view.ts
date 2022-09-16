@@ -1,51 +1,27 @@
-import { ethers } from "hardhat"
+import { deployments, ethers } from "hardhat"
 import { toBN } from "./utils";
 
-export const testnetView = async () => {
-    const stayking = await ethers.getContractAt("Stayking", "0x18A1Af12338d5a0fFF6aADb4364dBd8efF58f3f6");
-    const vault = await ethers.getContractAt("Vault", "0x33061E03aa8082d03f0aA66cDCf8159c976fc806");
-    // console.log(await ethers.provider.getBalance(stayking.address));
+const StaykingAddress = "0x5c16AD45ec86A50a59b4fe7d9B205aCa2100de2f"
+const VaultAddress = "0xa6c036c12b65703Bd7C0e4F42Dc0E75f74675C64"
 
-    // console.log((await vault.lastAccruedAt()).toNumber());
-    // console.log((await vault.lastAnnualRateBps()).toNumber());
-    // console.log(new Date().getTime() / 1000);
+export const redeploy = async () => {
+    const stayking = await ethers.getContractAt("Stayking", StaykingAddress);
+    const vault = await ethers.getContractAt("Vault", VaultAddress);
+    const [deployer] = await ethers.getSigners();
 
-    // const ur = await vault.utilizationRateBps();
-    // console.log('ur', ur.toString());
-    // const ir = await vault.getInterestRate();
-    // console.log('ir', ir.toString());
-    // const totalAmount = await vault.totalAmount();
-    // console.log(
-    //     'base Interest',
-    //     ir.mul(100 * 60 * 60 * 24 * 365).toString()
-    // )
-    // console.log('TotalAmount', (await vault.totalAmount()).toString());
-    // console.log('Debt Amount', (await vault.totalDebtAmount()).toString());
-
-    // console.log(
-    //     (await vault.totalDebtAmount()).mul(1825400).div(10).div(
-    //         await vault.totalAmount()
-    //     ).toString()
+    // await stayking.updateWhitelistedKillerStatus(
+    //     ["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"],
+    //     true
     // );
+    // const deploy = await deployments.deploy("Vault", {
+    //     contract: "Vault",
+    //     from: deployer.address,
+    //     proxy: {
+    //         proxyContract: 'OpenZeppelinTransparentProxy',
+    //         owner: deployer.address,
+    //       }
+    // });
 
-    const mockToken = await vault.token();
-    const jen = "0xb9D40e433b5434fdcba80D405F906143aa354237";
-    const danny = "0xc6Ffa5c7aD9c7f46A6f61c04B495c4cc7c77cD33";
-    console.log(mockToken.toString());
-    const info = await stayking.positionInfo(
-        jen, mockToken
-    )
-
-    console.log(await stayking.positionIdOf(danny, vault.address));
-    console.log(await stayking.positionsLengthOf(vault.address));
-    console.log(await stayking.positions(vault.address, '0x0d'));
-    console.log(
-        await stayking.positionInfo(danny, mockToken)
-    )
-
-    console.log(await stayking.totalShare());
-    console.log(await stayking.totalAmount());
-    
 }
 
-testnetView()
+redeploy()

@@ -24,6 +24,10 @@ interface IStayking {
 
     function vaultRewardBps() external view returns(uint256);
 
+    function totalAmount() external view returns(uint256);
+
+    function totalShare() external view returns(uint256);
+
     function killFactorBps() external view returns(uint256);
 
     function liquidateDebtFactorBps() external view returns(uint256);
