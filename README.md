@@ -1,5 +1,8 @@
 ## [Submodule] DeFi contract of StayKing House
 
+This repository is a DeFi service that allows both lenders and stakers to earn vastly yields by depositing your assets into a vault or borrow tokens from a vault for leverage staking
+
+
 ## Deploy Local Node
 1. First, run the local node using the script below in the terminal.
 
