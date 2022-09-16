@@ -29,7 +29,7 @@
    - `UnbondedEvmos` uEVMOS token contract that allows future claims to be paid to users during unbonding
 
 
-## Deployed Testnet Node
+## Deployed the contracts on the testnet (evmos_9000-4)
 
 ```
     [mockUSDC] 0x9218b75D53612212137890354B1a16163Abb9DE3
