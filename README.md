@@ -41,11 +41,11 @@ This repository is a DeFi service that allows both lenders and stakers to earn v
     
     [TripleSlopeModel] 0x739DDcC9e458bD0A88c0882aca7BB72EaFff8781
     
-    [UnbondedEvmos] 0xedB25Fee105C80Ab43235e016962ffd29Fe616bC
+    [UnbondedEvmos] 0x20E3f88438ef008256BA40e5D265fb49ADc7fBeF
     
-    [Stayking] 0x18A1Af12338d5a0fFF6aADb4364dBd8efF58f3f6
+    [Stayking] 0x5c16AD45ec86A50a59b4fe7d9B205aCa2100de2f
     
-    [Vault] 0x33061E03aa8082d03f0aA66cDCf8159c976fc806
+    [Vault] 0xa6c036c12b65703Bd7C0e4F42Dc0E75f74675C64
 ```
 
 ## Terms
