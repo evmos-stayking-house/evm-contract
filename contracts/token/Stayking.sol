@@ -110,7 +110,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         updateConfigs(
             1e16,     // minDebtInBase (0.01EVMOS)
             3000,     // reservedBps
-            1000,     // vaultRewardBps
+            2000,     // vaultRewardBps
             7500,     // killFactorBps
             7500,     // liquidateDebtFactorBps
              500      // liquidationFeeBps

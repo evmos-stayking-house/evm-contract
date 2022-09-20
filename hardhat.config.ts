@@ -43,7 +43,10 @@ const config: HardhatUserConfig = {
             // ]
         },
         localhost: {
-
+            forking: {
+                url: "https://en5.klayfi.finance",
+                blockNumber: 12800000
+            }
         },
         sooho: {
             chainId: 9000,

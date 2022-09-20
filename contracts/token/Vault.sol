@@ -133,8 +133,8 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
             return (0, 0);
         }
 
-        baseBps = 1E4 * getInterestRate() * 365 days / amount;
-        bonusBps = getBaseIn(totalStakedDebtAmount) * IStayking(stayking).vaultRewardBps() 
+        baseBps = 1E4 * getInterestRate() * totalDebtAmount() * 365 days / amount / 1E18;
+        bonusBps = getBaseIn(totalStakedDebtAmount) * IStayking(stayking).vaultRewardBps()
             / IStayking(stayking).totalAmount();
     }
 
