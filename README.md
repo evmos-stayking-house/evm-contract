@@ -2,8 +2,8 @@
 
 This repository is a DeFi service that allows both lenders and stakers to earn vastly yields by depositing your assets into a vault or borrow tokens from a vault for leverage staking
 
-
 ## Deploy Local Node
+
 1. First, run the local node using the script below in the terminal.
 
     ```bash
@@ -14,56 +14,61 @@ This repository is a DeFi service that allows both lenders and stakers to earn v
     Local node access is now available at http://127.0.0.1:8545/ or http://localhost:8545/.
 
 2. Open a new terminal and run the script below.
+
     ```
     npm run deploy:localhost
     ```
+
     When you run the deployment script, the contracts below are deployed. The address of each contract can be found in 'configs/localhost/${contract name}'
     The highest 'version' is the most recently distributed contract.
 
-
-   - Three types of `ERC20Ownable` tokens (tATOM, tUSDC, tUSDT)
-     These tokens are set to allow the deployer to mint freely.
-   - `MockSwap` and `MockSwap Helper` MockSwap is a contract to implement the simplest features of DEX.
-     Only EVMOS, tATOM, tUSDC, and tUSDT are supported. The replacement fee is 1 EVMOS = 2tATOM = 2tUSDC = 2tUSDT.
-   - `TripleSlopeModel`
-       Contract for calculating the interest cost of the Vault. It is not intended to be used directly by the web client.
-   - `Stayking` Contract for Leverage Staking
-   - `Vault` Contract for lending or borrowing Mock USDC for Leverage Staking
-   - `UnbondedEvmos` uEVMOS token contract that allows future claims to be paid to users during unbonding
-
+    - Three types of `ERC20Ownable` tokens (tATOM, tUSDC, tUSDT)
+      These tokens are set to allow the deployer to mint freely.
+    - `MockSwap` and `MockSwap Helper` MockSwap is a contract to implement the simplest features of DEX.
+      Only EVMOS, tATOM, tUSDC, and tUSDT are supported. The replacement fee is 1 EVMOS = 2tATOM = 2tUSDC = 2tUSDT.
+    - `TripleSlopeModel`
+      Contract for calculating the interest cost of the Vault. It is not intended to be used directly by the web client.
+    - `Stayking` Contract for Leverage Staking
+    - `Vault` Contract for lending or borrowing Mock USDC for Leverage Staking
+    - `UnbondedEvmos` uEVMOS token contract that allows future claims to be paid to users during unbonding
 
 ## Deployed the contracts on the testnet (evmos_9000-4)
 
 ```
     [mockUSDC] 0x9218b75D53612212137890354B1a16163Abb9DE3
-    
+
     [MockSwap] 0x08Be1FDf4A512fc6caA7aE1Be029b922d05EA5B3
-    
+
     [TripleSlopeModel] 0x739DDcC9e458bD0A88c0882aca7BB72EaFff8781
-    
+
     [UnbondedEvmos] 0x20E3f88438ef008256BA40e5D265fb49ADc7fBeF
-    
+
     [Stayking] 0x5c16AD45ec86A50a59b4fe7d9B205aCa2100de2f
-    
+
     [Vault] 0xa6c036c12b65703Bd7C0e4F42Dc0E75f74675C64
 ```
 
 ## Terms
+
 #### Lender
-  The principal that supplies tokens to Vault.
-- Deposit / Withdraw
-   - Lender putting tokens into Vault is called 'deposit' and reclaiming them is called 'withdraw'.
-- loan / repay
-  - Stayking contract borrowing tokens from Vault is called 'loan' and paying debts is called 'repay'.
-- Bps
-  - Basis Points, Percentage of 10000
-    ( e.g. 100bps = 0.01 / 12345bps = 1.2345 )
-- Utilization Rate
-  - Percentage of tokens lent to Vault that have been loaned to Stayking
-  If 70ATOM of the e.g. lending 100ATOM is loaned, the utilization rate is 0.7.
-  Because renders can 'withdraw' at any time, Vault must hold and leave a certain percentage of the total tokens free.
-  The ratio of this minimum margin is called 'minReservedBps'.
+
+The principal that supplies tokens to Vault.
+
+-   Deposit / Withdraw
+    -   Lender putting tokens into Vault is called 'deposit' and reclaiming them is called 'withdraw'.
+-   loan / repay
+    -   Stayking contract borrowing tokens from Vault is called 'loan' and paying debts is called 'repay'.
+-   Bps
+    -   Basis Points, Percentage of 10000
+        ( e.g. 100bps = 0.01 / 12345bps = 1.2345 )
+-   Utilization Rate
+    -   Percentage of tokens lent to Vault that have been loaned to Stayking
+        If 70ATOM of the e.g. lending 100ATOM is loaned, the utilization rate is 0.7.
+        Because renders can 'withdraw' at any time, Vault must hold and leave a certain percentage of the total tokens free.
+        The ratio of this minimum margin is called 'minReservedBps'.
+
 #### Amount vs Share
+
 The amount is usually added when counting the basic amount of Token, and the share is added when counting the amount of ibToken.
 The ratio of totalAmount and totalShare determines the ratio of ibToken and Token.
 Let's take an example of Mount and Share.
@@ -78,15 +83,11 @@ Let's take an example of Mount and Share.
 5. Because interest income is constantly generated in Vault, the exchange rate between ibATOM and ATOM increases over time.
    Exceptionally, this exchange fee can be reduced if the user borrows an Atom and then the price of the Atom rises sharply and the user cannot pay back the borrowed Atom.
 
-
-
-
 ## Evmos Testnet JSON-RPC URL & Chain ID
 
 ```
 ChainId : 9000
 Currency : tEVMOS
 Block Explorer : https://evm.evmos.dev
-JSON-RPC URL : https://eth.bd.evmos.dev:8545	
+JSON-RPC URL : https://eth.bd.evmos.dev:8545
 ```
-

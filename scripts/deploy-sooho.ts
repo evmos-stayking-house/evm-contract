@@ -1,2 +1,1 @@
-
-console.log("NOT IMPLEMENTED...")
+console.log('NOT IMPLEMENTED...');

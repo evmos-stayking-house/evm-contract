@@ -1,7 +1,7 @@
-import deployTestnetWithMockswap from "../scripts/deploy/testnet-mockswap"
+import deployTestnetWithMockswap from '../scripts/deploy/testnet-mockswap';
 
-describe("", async function (){
-    it("", async function (){
+describe('', async function () {
+    it('', async function () {
         await deployTestnetWithMockswap();
-    })  
-})
+    });
+});

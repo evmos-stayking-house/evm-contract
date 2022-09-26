@@ -14,7 +14,7 @@ library SafeToken {
         );
         require(
             success && (data.length == 0 || abi.decode(data, (bool))),
-            "!safeApprove"
+            '!safeApprove'
         );
     }
 
@@ -29,7 +29,7 @@ library SafeToken {
         );
         require(
             success && (data.length == 0 || abi.decode(data, (bool))),
-            "!safeTransfer"
+            '!safeTransfer'
         );
     }
 
@@ -46,12 +46,12 @@ library SafeToken {
 
         require(
             success && (data.length == 0 || abi.decode(data, (bool))),
-            "!safeTransferFrom"
+            '!safeTransferFrom'
         );
     }
 
     function safeTransferEVMOS(address to, uint256 value) internal {
         (bool success, ) = to.call{value: value}(new bytes(0));
-        require(success, "!safeTransferEVMOS");
+        require(success, '!safeTransferEVMOS');
     }
 }

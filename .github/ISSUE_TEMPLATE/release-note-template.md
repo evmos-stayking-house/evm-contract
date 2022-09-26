@@ -2,8 +2,8 @@
 name: Release Note Template
 about: 릴리즈 노트 작성을 위한 템플릿입니다.
 title: 긴급/주간 업데이트
-labels: "Priority: High, Type: Release"
-assignees: ""
+labels: 'Priority: High, Type: Release'
+assignees: ''
 ---
 
 # 버전

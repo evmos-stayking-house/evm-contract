@@ -6,5 +6,4 @@ import { Contract, Config, BaseConfig } from 'hardhat-craftform/dist/core';
  *  You can use @Contract property decorator to connect other contract's config.
  */
 @Config()
-export class IEvmoSwapRouter01Config extends BaseConfig {
-}
+export class IEvmoSwapRouter01Config extends BaseConfig {}

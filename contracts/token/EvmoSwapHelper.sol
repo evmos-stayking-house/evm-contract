@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.3;
-import "../interface/ISwapHelper.sol";
-import "../interface/IEvmoSwapRouter.sol";
-import "../lib/utils/SafeToken.sol";
+import '../interface/ISwapHelper.sol';
+import '../interface/IEvmoSwapRouter.sol';
+import '../lib/utils/SafeToken.sol';
 
 contract EvmoSwapHelper is ISwapHelper {
-
     IEvmoSwapRouter public router;
 
-    constructor (
-        address router_
-    ){
+    constructor(address router_) {
         router = IEvmoSwapRouter(payable(router_));
     }
 
@@ -18,7 +15,7 @@ contract EvmoSwapHelper is ISwapHelper {
         address tokenX,
         address tokenY,
         uint256 dx
-    ) public override view returns (uint256 dy) {
+    ) public view override returns (uint256 dy) {
         address[] memory path = new address[](2);
         path[0] = tokenX == address(0) ? router.WETH() : tokenX;
         path[1] = tokenY == address(0) ? router.WETH() : tokenY;
@@ -31,7 +28,7 @@ contract EvmoSwapHelper is ISwapHelper {
         address tokenX,
         address tokenY,
         uint256 dy
-    ) public override view returns (uint256 dx) {
+    ) public view override returns (uint256 dx) {
         address[] memory path = new address[](2);
         path[0] = tokenX == address(0) ? router.WETH() : tokenX;
         path[1] = tokenY == address(0) ? router.WETH() : tokenY;
@@ -45,13 +42,13 @@ contract EvmoSwapHelper is ISwapHelper {
         address tokenY,
         uint256 dx,
         uint256 minDy
-    ) payable public override returns (uint256) {
+    ) public payable override returns (uint256) {
         address[] memory path = new address[](2);
         uint256[] memory amounts;
 
         // if tokenY == address(0) too, swapExactETHForTokens will be reverted.
-        if(tokenX == address(0)){
-            require(dx == msg.value, "exchange: invalid msg.value");
+        if (tokenX == address(0)) {
+            require(dx == msg.value, 'exchange: invalid msg.value');
             path[0] = router.WETH();
             path[1] = tokenY;
 
@@ -66,18 +63,13 @@ contract EvmoSwapHelper is ISwapHelper {
         }
         /// @dev msg.sender should approve this helper contract first
         else {
-            SafeToken.safeTransferFrom(
-                tokenX,
-                msg.sender,
-                address(this),
-                dx
-            );
+            SafeToken.safeTransferFrom(tokenX, msg.sender, address(this), dx);
 
             SafeToken.safeApprove(tokenX, address(router), dx);
 
             path[0] = tokenX;
 
-            if(tokenY == address(0)){
+            if (tokenY == address(0)) {
                 path[1] = router.WETH();
 
                 amounts = router.swapExactTokensForETH(
@@ -87,8 +79,7 @@ contract EvmoSwapHelper is ISwapHelper {
                     msg.sender,
                     block.timestamp + 600 // 10 minutes
                 );
-            }
-            else {
+            } else {
                 path[1] = tokenY;
                 amounts = router.swapExactTokensForTokens(
                     dx,

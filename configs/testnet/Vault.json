@@ -1,14 +1,14 @@
 [
-  {
-    "alias": "ibmockUSDC",
-    "address": "0x33061E03aa8082d03f0aA66cDCf8159c976fc806",
-    "version": 0,
-    "deployedAt": 1663080417
-  },
-  {
-    "alias": "ibmockUSDC",
-    "address": "0xa6c036c12b65703Bd7C0e4F42Dc0E75f74675C64",
-    "version": 1,
-    "deployedAt": 1663331872
-  }
+    {
+        "alias": "ibmockUSDC",
+        "address": "0x33061E03aa8082d03f0aA66cDCf8159c976fc806",
+        "version": 0,
+        "deployedAt": 1663080417
+    },
+    {
+        "alias": "ibmockUSDC",
+        "address": "0xa6c036c12b65703Bd7C0e4F42Dc0E75f74675C64",
+        "version": 1,
+        "deployedAt": 1663331872
+    }
 ]

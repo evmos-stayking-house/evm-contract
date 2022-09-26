@@ -1,8 +1,8 @@
 [
-  {
-    "alias": "MockSwap",
-    "address": "0x08Be1FDf4A512fc6caA7aE1Be029b922d05EA5B3",
-    "version": 0,
-    "deployedAt": 1663080333
-  }
+    {
+        "alias": "MockSwap",
+        "address": "0x08Be1FDf4A512fc6caA7aE1Be029b922d05EA5B3",
+        "version": 0,
+        "deployedAt": 1663080333
+    }
 ]

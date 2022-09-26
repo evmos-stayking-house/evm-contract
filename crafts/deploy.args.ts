@@ -42,7 +42,8 @@ export type OwnableUpgradeableArgs = [] | undefined;
 export type OwnableUpgradeableDeployArgs = DeployArgs<OwnableUpgradeableArgs>;
 // ReentrancyGuardUpgradeable
 export type ReentrancyGuardUpgradeableArgs = [] | undefined;
-export type ReentrancyGuardUpgradeableDeployArgs = DeployArgs<ReentrancyGuardUpgradeableArgs>;
+export type ReentrancyGuardUpgradeableDeployArgs =
+    DeployArgs<ReentrancyGuardUpgradeableArgs>;
 // IERC20
 export type IERC20Args = [] | undefined;
 export type IERC20DeployArgs = DeployArgs<IERC20Args>;
@@ -57,16 +58,28 @@ export type EvmoSwapHelperArgs = [address];
 export type EvmoSwapHelperDeployArgs = DeployArgs<EvmoSwapHelperArgs>;
 // Stayking
 export type StaykingArgs = [] | undefined;
-export type StaykingProxyProps = ProxyProps<"__Stayking_init", [address, address]>;
+export type StaykingProxyProps = ProxyProps<
+    '__Stayking_init',
+    [address, address]
+>;
 export type StaykingDeployArgs = DeployArgs<StaykingArgs, StaykingProxyProps>;
 // TripleSlopeModel
 export type TripleSlopeModelArgs = [] | undefined;
 export type TripleSlopeModelDeployArgs = DeployArgs<TripleSlopeModelArgs>;
 // UnbondedEvmos
 export type UnbondedEvmosArgs = [] | undefined;
-export type UnbondedEvmosProxyProps = ProxyProps<"__UnbondedEvmos_init", [BigNumberish]>;
-export type UnbondedEvmosDeployArgs = DeployArgs<UnbondedEvmosArgs, UnbondedEvmosProxyProps>;
+export type UnbondedEvmosProxyProps = ProxyProps<
+    '__UnbondedEvmos_init',
+    [BigNumberish]
+>;
+export type UnbondedEvmosDeployArgs = DeployArgs<
+    UnbondedEvmosArgs,
+    UnbondedEvmosProxyProps
+>;
 // Vault
 export type VaultArgs = [] | undefined;
-export type VaultProxyProps = ProxyProps<"__Vault_init", [string, string, address, address, address, address, BigNumberish]>;
+export type VaultProxyProps = ProxyProps<
+    '__Vault_init',
+    [string, string, address, address, address, address, BigNumberish]
+>;
 export type VaultDeployArgs = DeployArgs<VaultArgs, VaultProxyProps>;

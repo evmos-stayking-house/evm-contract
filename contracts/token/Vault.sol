@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "hardhat/console.sol";
-import "../interface/IVault.sol";
-import "../interface/IInterestModel.sol";
-import "../interface/ISwapHelper.sol";
-import "../interface/IStayking.sol";
-import "../lib/ERC20Upgradeable.sol";
-import "../lib/OwnableUpgradeable.sol";
-import "../lib/interface/IERC20.sol";
-import "../lib/utils/SafeToken.sol";
-
+import 'hardhat/console.sol';
+import '../interface/IVault.sol';
+import '../interface/IInterestModel.sol';
+import '../interface/ISwapHelper.sol';
+import '../interface/IStayking.sol';
+import '../lib/ERC20Upgradeable.sol';
+import '../lib/OwnableUpgradeable.sol';
+import '../lib/interface/IERC20.sol';
+import '../lib/utils/SafeToken.sol';
 
 /************************************************************
  * @dev Glossary
@@ -19,7 +18,6 @@ import "../lib/utils/SafeToken.sol";
  * share => unit of ibToken
  *************************************************************/
 contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
-
     address private constant BASE_TOKEN = address(0);
     uint256 private constant DENOM = 1E18;
     uint256 private constant YEAR_TOTAL_SECONDS = 315360000000;
@@ -71,10 +69,10 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
     /*************
      * Modifiers *
-    **************/
+     **************/
 
-    modifier onlyStayking(){
-        require(msg.sender == stayking, "Vault: Not Stayking contract.");
+    modifier onlyStayking() {
+        require(msg.sender == stayking, 'Vault: Not Stayking contract.');
         _;
     }
 
@@ -85,7 +83,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
     /****************
      * Initializer *
-    *****************/
+     *****************/
 
     function __Vault_init(
         string calldata _name,
@@ -96,9 +94,9 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         address _interestModel,
         uint256 _minReservedBps
     ) external initializer {
-        require(_stayking != address(0), "Vault: Stayking address is zero");
-        require(_token != address(0), "Vault: Base Token is zero address");
-        
+        require(_stayking != address(0), 'Vault: Stayking address is zero');
+        require(_token != address(0), 'Vault: Base Token is zero address');
+
         __ERC20_init(_name, _symbol);
         __Ownable_init();
 
@@ -119,98 +117,131 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     }
 
     // TODO removed
-    function lastAnnualRateBps() public view returns(uint256) {
-        if(lastPaid.totalAmount == 0 || uint256(lastPaid.interval) == 0){
+    function lastAnnualRateBps() public view returns (uint256) {
+        if (lastPaid.totalAmount == 0 || uint256(lastPaid.interval) == 0) {
             return 0;
         }
         // 31536000 = 365 * 24 * 60 * 60
-        return 315360000000 * lastPaid.reward / lastPaid.totalAmount / uint256(lastPaid.interval);
+        return
+            (315360000000 * lastPaid.reward) /
+            lastPaid.totalAmount /
+            uint256(lastPaid.interval);
     }
 
-    function getAccruedRateBps() public view returns(uint256 baseBps, uint256 bonusBps){
+    function getAccruedRateBps()
+        public
+        view
+        returns (uint256 baseBps, uint256 bonusBps)
+    {
         uint256 amount = totalAmount();
-        if(amount == 0){
+        if (amount == 0) {
             return (0, 0);
         }
 
-        baseBps = 1E4 * getInterestRate() * totalDebtAmount() * 365 days / amount / 1E18;
-        bonusBps = getBaseIn(totalStakedDebtAmount) * IStayking(stayking).vaultRewardBps()
-            / IStayking(stayking).totalAmount();
+        baseBps =
+            (1E4 * getInterestRate() * totalDebtAmount() * 365 days) /
+            amount /
+            1E18;
+        bonusBps =
+            (getBaseIn(totalStakedDebtAmount) *
+                IStayking(stayking).vaultRewardBps()) /
+            IStayking(stayking).totalAmount();
     }
 
     // @dev (token in vault) + (debt)
-    function totalDebtAmount() public override view returns(uint256){
+    function totalDebtAmount() public view override returns (uint256) {
         return totalStakedDebtAmount + totalPendingDebtAmount;
     }
 
-    function totalAmount() public override view returns(uint256){
+    function totalAmount() public view override returns (uint256) {
         return IERC20(token).balanceOf(address(this)) + totalDebtAmount();
     }
 
-    function updateMinReservedBps(uint256 _minReservedBps) public override onlyOwner {
+    function updateMinReservedBps(uint256 _minReservedBps)
+        public
+        override
+        onlyOwner
+    {
         minReservedBps = _minReservedBps;
     }
 
-    function updateInterestModel(address _interestModel) public override onlyOwner {
+    function updateInterestModel(address _interestModel)
+        public
+        override
+        onlyOwner
+    {
         interestModel = _interestModel;
     }
-    
+
     function updateSwapHelper(address _swapHelper) public override onlyOwner {
         swapHelper = ISwapHelper(_swapHelper);
     }
 
-    function amountToShare(
-        uint256 amount
-    ) public view returns(uint256) {
+    function amountToShare(uint256 amount) public view returns (uint256) {
         uint256 _totalAmount = totalAmount();
-        return (_totalAmount == 0) ? amount :
-            (totalSupply() * amount) / _totalAmount;
+        return
+            (_totalAmount == 0)
+                ? amount
+                : (totalSupply() * amount) / _totalAmount;
     }
 
-    function shareToAmount(
-        uint256 share
-    ) public view returns(uint256) {
+    function shareToAmount(uint256 share) public view returns (uint256) {
         uint256 totalShare = totalSupply();
-        return (totalShare == 0) ? share :
-            (totalAmount() * share) / totalShare;
+        return (totalShare == 0) ? share : (totalAmount() * share) / totalShare;
     }
 
-    function debtAmountInBase(
-        address user
-    ) public override view returns(uint256){
+    function debtAmountInBase(address user)
+        public
+        view
+        override
+        returns (uint256)
+    {
         return getBaseIn(debtAmountOf[user]);
     }
 
-    function pendingDebtAmountToShare(
-        uint256 amount
-    ) public override view returns(uint256) {
-        return (totalPendingDebtAmount == 0) ? amount : 
-            (totalPendingDebtShare * amount) / totalPendingDebtAmount;
+    function pendingDebtAmountToShare(uint256 amount)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        return
+            (totalPendingDebtAmount == 0)
+                ? amount
+                : (totalPendingDebtShare * amount) / totalPendingDebtAmount;
     }
 
-    function pendingDebtShareToAmount(
-        uint256 share
-    ) public override view returns(uint256) {
-        return (totalPendingDebtShare == 0) ? share : 
-            (totalPendingDebtAmount * share) / totalPendingDebtShare;
+    function pendingDebtShareToAmount(uint256 share)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        return
+            (totalPendingDebtShare == 0)
+                ? share
+                : (totalPendingDebtAmount * share) / totalPendingDebtShare;
     }
 
     /// @notice Amount of interest paid per second
-    /// @dev denominator = 1E18 
-    function getInterestRate() public override view returns(uint256 interestRate){
-        interestRate = IInterestModel(interestModel)
-            .calcInterestRate(
-                totalDebtAmount(),
-                IERC20(token).balanceOf(address(this))
-            );
+    /// @dev denominator = 1E18
+    function getInterestRate()
+        public
+        view
+        override
+        returns (uint256 interestRate)
+    {
+        interestRate = IInterestModel(interestModel).calcInterestRate(
+            totalDebtAmount(),
+            IERC20(token).balanceOf(address(this))
+        );
     }
 
-    function utilizationRateBps() public override view returns(uint256){
+    function utilizationRateBps() public view override returns (uint256) {
         uint256 amount = totalAmount();
-        if(amount == 0)
-            return 0;
-        
-        return 1E4 * totalDebtAmount() / amount;
+        if (amount == 0) return 0;
+
+        return (1E4 * totalDebtAmount()) / amount;
     }
 
     // function saveUtilizationRateBps() public override {
@@ -229,29 +260,31 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         during (lastAccruedAt ~ present) is calculated and added.
      */
     function _accrue() private {
-        if (block.timestamp <= lastAccruedAt) 
-            return;
+        if (block.timestamp <= lastAccruedAt) return;
         uint256 timePast = block.timestamp - lastAccruedAt;
 
-        uint256 stakedInterest = (getInterestRate() * totalStakedDebtAmount * timePast) 
-            / DENOM;
+        uint256 stakedInterest = (getInterestRate() *
+            totalStakedDebtAmount *
+            timePast) / DENOM;
 
         accInterest += stakedInterest;
 
-        uint256 pendingInterest = (getInterestRate() * totalPendingDebtAmount * timePast) 
-            / DENOM;
+        uint256 pendingInterest = (getInterestRate() *
+            totalPendingDebtAmount *
+            timePast) / DENOM;
         totalPendingDebtAmount += pendingInterest;
 
         lastAccruedAt = block.timestamp;
     }
 
     /// @dev for test -> should be REMOVED
-    function accrue () public {
+    function accrue() public {
         _accrue();
     }
+
     /******************
      * Swap Functions *
-    *******************/
+     *******************/
     /**
      @dev
      baseAmount: amount of EVMOS
@@ -259,7 +292,10 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
      */
 
     /// @dev vault token -> baseToken(EVMOS) (known baseAmount)
-    function _swapToBase(uint256 baseAmount) private returns(uint256 tokenAmount) {
+    function _swapToBase(uint256 baseAmount)
+        private
+        returns (uint256 tokenAmount)
+    {
         // 1. calculate amountIn
         tokenAmount = getTokenIn(baseAmount);
         // 2. approve to swapHelper
@@ -269,8 +305,17 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     }
 
     /// @dev baseToken(EVMOS) -> vault token (known baseAmount)
-    function _swapFromBase(uint256 baseAmount, uint256 minDy) private returns(uint256 tokenAmount) {
-        return swapHelper.exchange{value: baseAmount}(BASE_TOKEN, token, baseAmount, minDy);
+    function _swapFromBase(uint256 baseAmount, uint256 minDy)
+        private
+        returns (uint256 tokenAmount)
+    {
+        return
+            swapHelper.exchange{value: baseAmount}(
+                BASE_TOKEN,
+                token,
+                baseAmount,
+                minDy
+            );
     }
 
     /**
@@ -282,44 +327,58 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
       e.g. function getBaseIn()
       -> this func calculates how much EVMOS is needed to swap EVMOS to Token.
      */
-    
+
     /// @dev calc (?)EVMOS = $ token
-    function getBaseIn(
-        uint256 tokenOut
-    ) public override view returns(uint256 baseIn) {
+    function getBaseIn(uint256 tokenOut)
+        public
+        view
+        override
+        returns (uint256 baseIn)
+    {
         return swapHelper.getDx(BASE_TOKEN, token, tokenOut);
     }
 
     /// @dev calc $ token = (?)EVMOS
-    function getBaseOut(
-        uint256 baseIn
-    ) public override view returns(uint256 tokenOut) {
+    function getBaseOut(uint256 baseIn)
+        public
+        view
+        override
+        returns (uint256 tokenOut)
+    {
         return swapHelper.getDy(token, BASE_TOKEN, baseIn);
     }
 
     /// @dev calc (?)token = $ EVMOS
-    function getTokenIn(
-        uint256 baseOut
-    ) public override view returns(uint256 tokenIn) {
+    function getTokenIn(uint256 baseOut)
+        public
+        view
+        override
+        returns (uint256 tokenIn)
+    {
         return swapHelper.getDx(token, BASE_TOKEN, baseOut);
     }
 
     /// @dev calc $ EVMOS = (?)token
-    function getTokenOut(
-        uint256 tokenIn
-    ) public override view returns(uint256 baseOut) {
+    function getTokenOut(uint256 tokenIn)
+        public
+        view
+        override
+        returns (uint256 baseOut)
+    {
         return swapHelper.getDy(BASE_TOKEN, token, tokenIn);
     }
 
-    
     /************************************
      * interface IVault Implementations
      ************************************/
 
     /// @notice user approve should be preceded
-    function deposit(
-        uint256 amount
-    ) public override accrueBefore returns(uint256 share){
+    function deposit(uint256 amount)
+        public
+        override
+        accrueBefore
+        returns (uint256 share)
+    {
         share = amountToShare(amount);
         SafeToken.safeTransferFrom(token, msg.sender, address(this), amount);
         _mint(msg.sender, share);
@@ -327,9 +386,12 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         emit Deposit(msg.sender, amount, share);
     }
 
-    function withdraw(
-        uint256 share
-    ) public override accrueBefore returns(uint256 amount){
+    function withdraw(uint256 share)
+        public
+        override
+        accrueBefore
+        returns (uint256 amount)
+    {
         amount = shareToAmount(share);
         // TODO minReserved?
         _burn(msg.sender, share);
@@ -339,11 +401,14 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     }
 
     /// @notice loan is only for Stayking contract.
-    function loan(
-        address user,
-        uint256 debtInBase
-    ) public override onlyStayking accrueBefore returns (uint256 debt) {
-        require(user != address(0), "loan: zero address cannot loan.");
+    function loan(address user, uint256 debtInBase)
+        public
+        override
+        onlyStayking
+        accrueBefore
+        returns (uint256 debt)
+    {
+        require(user != address(0), 'loan: zero address cannot loan.');
 
         ///@dev swap token -> (amountInBase)EVMOS
         debt = _swapToBase(debtInBase);
@@ -351,7 +416,8 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         totalStakedDebtAmount += debt;
 
         require(
-            (totalStakedDebtAmount + totalPendingDebtAmount) * 1E4 <= totalAmount() * (1E4 - minReservedBps),
+            (totalStakedDebtAmount + totalPendingDebtAmount) * 1E4 <=
+                totalAmount() * (1E4 - minReservedBps),
             "Loan: Cant' loan debt anymore."
         );
 
@@ -362,11 +428,11 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     // @TODO Should approve MAX_UINT?
     /// @dev Repay user's debt.
     /// Stayking should approve token first.
-    function _repay(
-        address user,
-        uint256 amount
-    ) private accrueBefore {
-        require(debtAmountOf[user] >= amount, "repay: too much amount to repay.");
+    function _repay(address user, uint256 amount) private accrueBefore {
+        require(
+            debtAmountOf[user] >= amount,
+            'repay: too much amount to repay.'
+        );
         unchecked {
             debtAmountOf[user] -= amount;
         }
@@ -374,10 +440,11 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         emit Repay(user, amount);
     }
 
-    function repayInToken(
-        address user,
-        uint256 amount
-    ) public override onlyStayking {
+    function repayInToken(address user, uint256 amount)
+        public
+        override
+        onlyStayking
+    {
         SafeToken.safeTransferFrom(token, user, address(this), amount);
         _repay(user, amount);
     }
@@ -385,19 +452,26 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     /// @dev repay debt for Base token(EVMOS).
     /// @param user debt owner
     /// @param minRepaid  minimum repaid debtToken amonut
-    function repayInBase(
-        address user,
-        uint256 minRepaid
-    ) public payable override onlyStayking returns(uint256 repaid) {
+    function repayInBase(address user, uint256 minRepaid)
+        public
+        payable
+        override
+        onlyStayking
+        returns (uint256 repaid)
+    {
         repaid = _swapFromBase(msg.value, minRepaid);
         _repay(user, repaid);
     }
 
-    function takeDebtOwnership(
-        address from,
-        uint256 amount
-    ) public override onlyStayking {
-        require(debtAmountOf[from] >= amount, "takeDebtOwnership: too much amount to take.");
+    function takeDebtOwnership(address from, uint256 amount)
+        public
+        override
+        onlyStayking
+    {
+        require(
+            debtAmountOf[from] >= amount,
+            'takeDebtOwnership: too much amount to take.'
+        );
         unchecked {
             debtAmountOf[from] -= amount;
         }
@@ -406,15 +480,22 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     }
 
     /// @dev calculate interest (1 day) in base (EVMOS)
-    function getInterestInBase() public override view returns(uint256) {
+    function getInterestInBase() public view override returns (uint256) {
         return accInterest > 0 ? getBaseIn(accInterest) : 0;
     }
 
     // msg.value = interest + reward(bonus)
-    function payInterest(
-        uint256 minPaidInterest
-    ) public payable override onlyStayking accrueBefore {
-        require(block.timestamp > uint256(lastPaid.timestamp), "payInterest: already paid.");
+    function payInterest(uint256 minPaidInterest)
+        public
+        payable
+        override
+        onlyStayking
+        accrueBefore
+    {
+        require(
+            block.timestamp > uint256(lastPaid.timestamp),
+            'payInterest: already paid.'
+        );
         uint256 paidInterest = _swapFromBase(msg.value, minPaidInterest);
 
         lastPaid.totalDebtAmount = totalDebtAmount();
@@ -423,13 +504,12 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         lastPaid.timestamp = uint128(block.timestamp);
         lastPaid.reward = paidInterest;
 
-        if(paidInterest > accInterest){
+        if (paidInterest > accInterest) {
             // reward = paidInterest - accInterest
             emit PayInterest(accInterest, paidInterest - accInterest);
 
             accInterest = 0;
-        }
-        else {
+        } else {
             accInterest -= paidInterest;
             emit PayInterest(paidInterest, 0);
         }
@@ -437,18 +517,23 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
     /// @dev pending repay debt because of EVMOS Unstaking's 14 days lock.
     /// Stayking should approve token first.
-    function pendRepay(
-        address user,
-        uint256 amount
-    ) public override onlyStayking returns(uint256 pendingDebtShare) {
-        require(amount <= debtAmountOf[user], "pendRepay: too much amount to repay.");
+    function pendRepay(address user, uint256 amount)
+        public
+        override
+        onlyStayking
+        returns (uint256 pendingDebtShare)
+    {
+        require(
+            amount <= debtAmountOf[user],
+            'pendRepay: too much amount to repay.'
+        );
         /// @dev subtract from debtAmountOf[user]
         unchecked {
             debtAmountOf[user] -= amount;
         }
         totalStakedDebtAmount -= amount;
 
-        /// @dev The pendingDebtAmount increases over time. 
+        /// @dev The pendingDebtAmount increases over time.
         /// This is because lending interest is charged during the 14 days of unbonding.
         pendingDebtShare = pendingDebtAmountToShare(amount);
         pendingDebtShareOf[user] += pendingDebtShare;
@@ -457,34 +542,44 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         totalPendingDebtAmount += amount;
     }
 
-    function getPendingDebt(
-        address user
-    ) public view override returns(uint256){
+    function getPendingDebt(address user)
+        public
+        view
+        override
+        returns (uint256)
+    {
         return pendingDebtShareToAmount(pendingDebtShareOf[user]);
     }
 
-    function getPendingDebtInBase(
-        address user
-    ) public view override returns(uint256){
+    function getPendingDebtInBase(address user)
+        public
+        view
+        override
+        returns (uint256)
+    {
         return getBaseIn(getPendingDebt(user));
     }
 
     /// @dev stayking should send with msg.value(=repayingDebtInBase)
-    function repayPendingDebt(
-        address user
-    ) public payable override returns(uint256 remained) {
+    function repayPendingDebt(address user)
+        public
+        payable
+        override
+        returns (uint256 remained)
+    {
         uint256 pendingDebt = getPendingDebt(user);
         uint256 pendingDebtInBase = getBaseIn(pendingDebt);
-        if(msg.value > pendingDebtInBase){
+        if (msg.value > pendingDebtInBase) {
             _swapFromBase(pendingDebtInBase, pendingDebt);
             pendingDebtShareOf[user] = 0;
             // return remained EVMOS
             remained = msg.value - pendingDebtInBase;
             SafeToken.safeTransferEVMOS(msg.sender, remained);
-        }
-        else {
+        } else {
             uint256 repaidDebtAmount = _swapFromBase(msg.value, 1);
-            uint256 repaidDebtShare = pendingDebtAmountToShare(repaidDebtAmount);
+            uint256 repaidDebtShare = pendingDebtAmountToShare(
+                repaidDebtAmount
+            );
             pendingDebtShareOf[user] -= repaidDebtShare;
             remained = 0;
         }

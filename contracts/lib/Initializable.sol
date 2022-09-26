@@ -3,7 +3,7 @@
 
 pragma solidity ^0.8.2;
 
-import "./AddressUpgradeable.sol";
+import './AddressUpgradeable.sol';
 
 /**
  * @dev This is a base contract to aid in writing upgradeable contracts, or any kind of contract that will be deployed
@@ -78,8 +78,10 @@ abstract contract Initializable {
     modifier initializer() {
         bool isTopLevelCall = !_initializing;
         require(
-            (isTopLevelCall && _initialized < 1) || (!AddressUpgradeable.isContract(address(this)) && _initialized == 1),
-            "Initializable: contract is already initialized"
+            (isTopLevelCall && _initialized < 1) ||
+                (!AddressUpgradeable.isContract(address(this)) &&
+                    _initialized == 1),
+            'Initializable: contract is already initialized'
         );
         _initialized = 1;
         if (isTopLevelCall) {
@@ -105,7 +107,10 @@ abstract contract Initializable {
      * a contract, executing them in the right order is up to the developer or operator.
      */
     modifier reinitializer(uint8 version) {
-        require(!_initializing && _initialized < version, "Initializable: contract is already initialized");
+        require(
+            !_initializing && _initialized < version,
+            'Initializable: contract is already initialized'
+        );
         _initialized = version;
         _initializing = true;
         _;
@@ -118,7 +123,7 @@ abstract contract Initializable {
      * {initializer} and {reinitializer} modifiers, directly or indirectly.
      */
     modifier onlyInitializing() {
-        require(_initializing, "Initializable: contract is not initializing");
+        require(_initializing, 'Initializable: contract is not initializing');
         _;
     }
 
@@ -129,7 +134,7 @@ abstract contract Initializable {
      * through proxies.
      */
     function _disableInitializers() internal virtual {
-        require(!_initializing, "Initializable: contract is initializing");
+        require(!_initializing, 'Initializable: contract is initializing');
         if (_initialized < type(uint8).max) {
             _initialized = type(uint8).max;
             emit Initialized(type(uint8).max);

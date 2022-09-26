@@ -2,7 +2,7 @@
 // OpenZeppelin Contracts v4.4.1 (security/ReentrancyGuard.sol)
 
 pragma solidity ^0.8.0;
-import "./Initializable.sol";
+import './Initializable.sol';
 
 /**
  * @dev Contract module that helps prevent reentrant calls to a function.
@@ -54,7 +54,7 @@ abstract contract ReentrancyGuardUpgradeable is Initializable {
      */
     modifier nonReentrant() {
         // On the first call to nonReentrant, _notEntered will be true
-        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+        require(_status != _ENTERED, 'ReentrancyGuard: reentrant call');
 
         // Any calls to nonReentrant after this point will fail
         _status = _ENTERED;

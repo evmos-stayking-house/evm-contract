@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.3;
 
-import "../interface/IInterestModel.sol";
+import '../interface/IInterestModel.sol';
 
 contract TripleSlopeModel is IInterestModel {
     /****************************

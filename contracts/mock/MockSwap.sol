@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.4;
 
-import "../lib/interface/IERC20.sol";
-import "../lib/utils/SafeToken.sol";
-import "../lib/Ownable.sol";
-
+import '../lib/interface/IERC20.sol';
+import '../lib/utils/SafeToken.sol';
+import '../lib/Ownable.sol';
 
 contract MockSwap is Ownable {
-    
     /**
         @dev 본 컨트랙트는 로컬 노드 배포용 컨트랙트로,
         EvmoSwapRouter과 유사한 역할을 하는 DEX라고 생각하면 됩니다.
@@ -22,9 +20,7 @@ contract MockSwap is Ownable {
     mapping(address => bool) public isSupported;
     uint256 public EVMOSpriceBps;
 
-    constructor (
-        address[] memory tokens
-    ){
+    constructor(address[] memory tokens) {
         for (uint256 i = 0; i < tokens.length; i++) {
             isSupported[tokens[i]] = true;
         }
@@ -37,12 +33,9 @@ contract MockSwap is Ownable {
         address tokenY,
         uint256 dy
     ) public view returns (uint256) {
-        if(tokenX == address(0))
-            return dy * 1E4 / EVMOSpriceBps;
-        else if(tokenY == address(0))
-            return dy * EVMOSpriceBps / 1E4;
-        else
-            return dy;
+        if (tokenX == address(0)) return (dy * 1E4) / EVMOSpriceBps;
+        else if (tokenY == address(0)) return (dy * EVMOSpriceBps) / 1E4;
+        else return dy;
     }
 
     function getDy(
@@ -50,12 +43,9 @@ contract MockSwap is Ownable {
         address tokenY,
         uint256 dx
     ) public view returns (uint256) {
-        if(tokenX == address(0))
-            return dx * EVMOSpriceBps / 1E4;
-        else if(tokenY == address(0))
-            return dx * 1E4 / EVMOSpriceBps;
-        else
-            return dx;
+        if (tokenX == address(0)) return (dx * EVMOSpriceBps) / 1E4;
+        else if (tokenY == address(0)) return (dx * 1E4) / EVMOSpriceBps;
+        else return dx;
     }
 
     function exchange(
@@ -63,15 +53,15 @@ contract MockSwap is Ownable {
         address tokenY,
         uint256 dx,
         uint256 /* minDy */
-    ) public payable returns(uint256 dy) {
-        if(tokenX == address(0)){
-            require(msg.value == dx, "MockSwap: msg.value != dx");
+    ) public payable returns (uint256 dy) {
+        if (tokenX == address(0)) {
+            require(msg.value == dx, 'MockSwap: msg.value != dx');
         } else {
             SafeToken.safeTransferFrom(tokenX, msg.sender, address(this), dx);
         }
 
         dy = getDy(tokenX, tokenY, dx);
-        if(tokenY == address(0)){
+        if (tokenY == address(0)) {
             SafeToken.safeTransferEVMOS(msg.sender, dy);
         } else {
             SafeToken.safeTransfer(tokenY, msg.sender, dy);
@@ -83,10 +73,8 @@ contract MockSwap is Ownable {
         SafeToken.safeTransferEVMOS(msg.sender, address(this).balance);
     }
 
-    function changeRatio(
-        uint256 newRatio
-    ) public onlyOwner {
-        require(newRatio > 0, "newRatio <= 0");
+    function changeRatio(uint256 newRatio) public onlyOwner {
+        require(newRatio > 0, 'newRatio <= 0');
         EVMOSpriceBps = newRatio;
     }
 

@@ -10,7 +10,6 @@ pragma solidity ^0.8.4;
  * Dy : Amount of Output Token
  *************************************************************/
 interface ISwapHelper {
-
     function getDy(
         address tokenX,
         address tokenY,
@@ -28,5 +27,5 @@ interface ISwapHelper {
         address tokenY,
         uint256 dx,
         uint256 minDy
-    ) payable external returns (uint256 dy);
+    ) external payable returns (uint256 dy);
 }

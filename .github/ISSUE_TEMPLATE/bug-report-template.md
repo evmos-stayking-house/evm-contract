@@ -4,7 +4,6 @@ about: 버그 리포트 템플릿입니다.
 title: ''
 labels: 'Priority: Medium, Type: Bugfix/Function, Type: Bugfix/UI, Type: Bugfix/Infra'
 assignees: ''
-
 ---
 
 # 발생 일시

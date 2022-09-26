@@ -1,14 +1,14 @@
 [
-  {
-    "alias": "Stayking",
-    "address": "0x18A1Af12338d5a0fFF6aADb4364dBd8efF58f3f6",
-    "version": 0,
-    "deployedAt": 1663080401
-  },
-  {
-    "alias": "Stayking",
-    "address": "0x5c16AD45ec86A50a59b4fe7d9B205aCa2100de2f",
-    "version": 1,
-    "deployedAt": 1663331858
-  }
+    {
+        "alias": "Stayking",
+        "address": "0x18A1Af12338d5a0fFF6aADb4364dBd8efF58f3f6",
+        "version": 0,
+        "deployedAt": 1663080401
+    },
+    {
+        "alias": "Stayking",
+        "address": "0x5c16AD45ec86A50a59b4fe7d9B205aCa2100de2f",
+        "version": 1,
+        "deployedAt": 1663331858
+    }
 ]

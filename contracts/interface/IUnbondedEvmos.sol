@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.3;
 
-interface IUnbondedEvmos { 
-
+interface IUnbondedEvmos {
     function lastUnbondedAt() external view returns (uint256);
 
     function unbondingInterval() external view returns (uint256);
@@ -16,15 +15,18 @@ interface IUnbondedEvmos {
 
     function unlock() external;
 
-    function supplyUnbondedToken() payable external;
+    function supplyUnbondedToken() external payable;
 
-    function isMinter(address account) external view returns(bool);
-    
+    function isMinter(address account) external view returns (bool);
+
     function updateMinterStatus(address account, bool status) external;
 
-    function getUnlockable(address account) external view returns(uint256 unlockable, uint256 debt);
+    function getUnlockable(address account)
+        external
+        view
+        returns (uint256 unlockable, uint256 debt);
 
     function isKillable(uint256 lockedId) external returns (bool);
 
     function kill(uint256 lockedId) external;
-}   
+}
