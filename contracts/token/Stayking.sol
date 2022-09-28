@@ -673,7 +673,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             msg.sender,
             p.user,
             vault,
-            amount - debtInBase,
+            debtInBase > amount ? 0 : amount - debtInBase,
             debtInBase,
             debt,
             p.share

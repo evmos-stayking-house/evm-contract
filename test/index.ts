@@ -11,7 +11,7 @@ import {
     VaultCraft,
 } from '../crafts';
 import deployLocal from '../scripts/deploy/localhost';
-import { toBN } from '../scripts/utils';
+import { toBN, toNum } from '../scripts/utils';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import {
     mine,
@@ -123,7 +123,7 @@ describe('EVMOS Hackathon Test', async () => {
                 lender1.address
             );
             expect(step2Share).eq(0);
-            expect(step2Amount.sub(step0Amount));
+            expect(step2Amount.sub(step0Amount)).eq(0);
 
             // Step 3. deposit again (initial liquidity)
             const liquidity = toUSDC(10000);
@@ -146,14 +146,13 @@ describe('EVMOS Hackathon Test', async () => {
         });
     });
 
-    describe('2. Stayking:: Add/Change position', async function () {
+    describe('2. StayKing:: Add/Change position', async function () {
         it('First add position (leverage x3)', async function () {
             const leverage = 3;
             const equity = toEVMOS(100);
             const debtInBase = equity.mul(leverage - 1);
 
             const beforeEVMOS = await staker1.getBalance();
-            await tUSDC.connect(staker1).approve(ibtUSDC.address, equity);
 
             // debt: 200 EVMOS = 400 USDC
             const tx = await Stayking.connect(staker1).addPosition(
@@ -188,9 +187,7 @@ describe('EVMOS Hackathon Test', async () => {
             expect(positionDebtInBase).to.equal(debtInBase);
             expect(await ibtUSDC.getBaseIn(debt)).to.equal(debtInBase);
 
-            expect(await ethers.provider.getBalance(ibtUSDC.address)).to.equal(
-                0
-            );
+            // check evmos balance at Stayking contract
             expect(await ethers.provider.getBalance(Stayking.address)).to.equal(
                 0
             );
@@ -211,7 +208,7 @@ describe('EVMOS Hackathon Test', async () => {
             // maybe 400 (4%)
             const ur = await ibtUSDC.utilizationRateBps();
 
-            // expected interest = (1E18 / 365) x * 1E14 * (x/3) / 365
+            // expected interest = (1E18 / 365) x * 1E4 * (x/3) / 365
             const expectedIR = toBN(1, 18)
                 .mul(ur)
                 .div(1e4)
@@ -226,7 +223,6 @@ describe('EVMOS Hackathon Test', async () => {
                 .mul(86400)
                 .div(toBN(1, 18));
             const afterAccInterest = await ibtUSDC.accInterest();
-
             expect(afterAccInterest.sub(beforeAccInterest)).to.approximately(
                 expected,
                 expected.div(10000)
@@ -331,7 +327,7 @@ describe('EVMOS Hackathon Test', async () => {
 
     describe('3. Lock uEVMOS', async function () {
         it('Remove Position', async function () {
-            const [beforePosVaule, beforeDebtInBase] =
+            const [beforePosValue, beforeDebtInBase] =
                 await Stayking.positionInfo(staker1.address, tUSDC.address);
 
             const beforeUEvmos = await uEVMOS.balanceOf(staker1.address);
@@ -352,7 +348,7 @@ describe('EVMOS Hackathon Test', async () => {
                 staker1.address
             );
 
-            expect(afterUEvmos).to.equal(beforePosVaule);
+            expect(afterUEvmos).to.equal(beforePosValue);
             expect(afterPosVaule).to.equal(0);
             expect(afterDebtInBase).to.equal(0); // debt: 0 / pendingDebt = real debt
             expect(pendingDebt).to.equal(beforeDebtInBase);
@@ -363,7 +359,7 @@ describe('EVMOS Hackathon Test', async () => {
             const uEVMOSTotalAmount = await uEVMOS.totalSupply();
 
             // uEVMOSTotalAmount = beforePosVaule
-            expect(uEVMOSTotalAmount).to.equal(beforePosVaule);
+            expect(uEVMOSTotalAmount).to.equal(beforePosValue);
         });
 
         it('should unlock after 14(+2) days', async function () {
@@ -814,17 +810,20 @@ describe('EVMOS Hackathon Test', async () => {
         });
 
         it('Position should be killed', async function () {
-            const [beforePositionValue, , beforePositionDebt, positionId] =
-                await Stayking.positionInfo(staker1.address, tUSDC.address);
+            const [
+                beforePositionValue,
+                beforeDebtInBase,
+                beforePositionDebt,
+                positionId,
+            ] = await Stayking.positionInfo(staker1.address, tUSDC.address);
             const liqFeeBps = await Stayking.liquidationFeeBps();
-
             await Stayking.connect(killer).kill(tUSDC.address, positionId);
 
             const [positionValue, positionDebt] = await Stayking.positionInfo(
                 staker1.address,
                 tUSDC.address
             );
-
+            console.log(positionValue, positionDebt);
             expect(positionValue).to.equal(0);
             expect(positionDebt).to.equal(0);
 

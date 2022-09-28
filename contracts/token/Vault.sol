@@ -18,9 +18,9 @@ import '../lib/utils/SafeToken.sol';
  * share => unit of ibToken
  *************************************************************/
 contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
+
     address private constant BASE_TOKEN = address(0);
     uint256 private constant DENOM = 1E18;
-    uint256 private constant YEAR_TOTAL_SECONDS = 315360000000;
 
     event Deposit(address user, uint256 amount, uint256 share);
     event Withdraw(address user, uint256 amount, uint256 share);
@@ -72,7 +72,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
      **************/
 
     modifier onlyStayking() {
-        require(msg.sender == stayking, 'Vault: Not Stayking contract.');
+        require(msg.sender == stayking, 'Vault: Not StayKing contract.');
         _;
     }
 
@@ -114,18 +114,6 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
             timestamp: uint128(block.timestamp),
             interval: uint128(0)
         });
-    }
-
-    // TODO removed
-    function lastAnnualRateBps() public view returns (uint256) {
-        if (lastPaid.totalAmount == 0 || uint256(lastPaid.interval) == 0) {
-            return 0;
-        }
-        // 31536000 = 365 * 24 * 60 * 60
-        return
-            (315360000000 * lastPaid.reward) /
-            lastPaid.totalAmount /
-            uint256(lastPaid.interval);
     }
 
     function getAccruedRateBps()
@@ -254,8 +242,8 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     // }
 
     /**
-        @dev 
-        Before each time the position is changed, 
+        @dev
+        Before each time the position is changed,
         the interest on "Stayking debt" (not on "pending debt")
         during (lastAccruedAt ~ present) is calculated and added.
      */
