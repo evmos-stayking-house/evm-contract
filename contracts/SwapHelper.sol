@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 import './interface/ISwapHelper.sol';
-import './interface/IEvmoSwapRouter.sol';
 import './lib/utils/SafeToken.sol';
 
 contract EvmoSwapHelper is ISwapHelper {
-    IEvmoSwapRouter public router;
+    // IEvmoSwapRouter public router;
 
-    constructor(address router_) {
-        router = IEvmoSwapRouter(payable(router_));
+    constructor(address _router) {
+        router = IEvmoSwapRouter(payable(_router));
     }
 
     function getDy(
