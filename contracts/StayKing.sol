@@ -11,7 +11,7 @@ import './lib/OwnableUpgradeable.sol';
 import './lib/ReentrancyGuardUpgradeable.sol';
 
 contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
-    
+
     /*************
      * CONSTANT *
      **************/
@@ -38,7 +38,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     event ChangeUEVMOS(address uEVMOS);
     event UpdateVault(address token, address vault);
     event UpdateConfigs(uint256 minDebtInBase, uint256 reservedBps, uint256 vaultRewardBps, uint256 killFactorBps, uint256 liquidateDebtFactorBps, uint256 liquidationFeeBps);
-    
+
     /******************
      * STATE VARIABLES
      ******************/
@@ -49,7 +49,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     uint256 public override totalShare;
 
     /// @dev min debtAmount in EVMOS (base token)
-    uint256 public override minDebtInBase; 
+    uint256 public override minDebtInBase;
     uint256 public override reservedBps;
     uint256 public override vaultRewardBps;
     uint256 public override killFactorBps;
@@ -122,7 +122,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         uEVMOS = IUnbondedEvmos(uEVMOS_);
         changeDelegator(delegator_);
-        whitelistedKiller[delegator_] = true; 
+        whitelistedKiller[delegator_] = true;
         whitelistedKiller[msg.sender] = true;
     }
 
@@ -466,9 +466,9 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         positionId = positionIdOf[user][vault];
 
         Position memory p = positions[vault][positionId];
-        
+
         positionValueInBase = shareToAmount(p.share);
-        
+
         debt = IVault(vault).debtAmountOf(user);
         debtInBase = IVault(vault).getBaseIn(debt);
     }
@@ -493,10 +493,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         /**
          @dev
             강제 청산 시 liquidationFee 를 매출로 잡는다.
-            
+
             만약 liquidationFee = 5%인 경우, unstake된 이후 pend된 포지션에 대해
             부채비율이 95%만 넘어가도 lender가 손해를 보게 됩니다.
-            
+
             _unstake의 4번째 파라미터 값(전체 unstake 되는 양 중 부채가 차지하는 비율)과
             uEVMOS.mintLockedToken의 4번째 파라미터 값을 조정하여 이를 해소할 수 있습니다.
          */
@@ -541,15 +541,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         uint256 distributable = msg.value - reserved;
 
-        // 2. pay interest to vaults
-        uint256 sumOfInterests = 0;
-        uint256 vaultsLength = vaults.length;
-        /// @dev save interest for each vault
-        uint256[] memory interestFor = new uint256[](vaultsLength);
-        for (uint256 i = 0; i < vaultsLength; i++) {
-            interestFor[i] = IVault(vaults[i]).getInterestInBase();
-            sumOfInterests += interestFor[i];
-        }
+        uint256 sumOfInterests;
+        uint256[] memory interestFor;
+
+        (sumOfInterests, interestFor) = _calculateInterestForVaults();
 
         if (sumOfInterests == 0) {
             // no or tiny debt
@@ -559,38 +554,32 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
 
         // 2-(1): reward to repay interest for vaults is insufficient.
-        // this case, totalAmount not changes (totalAmount = totalStaked)
         if (sumOfInterests >= distributable) {
-            for (uint256 i = 0; i < vaultsLength; i++) {
+            for (uint256 i = 0; i < vaults.length; i++) {
                 IVault vault = IVault(vaults[i]);
-                uint256 interestInBase = (interestFor[i] * distributable) /
-                    sumOfInterests;
+                uint256 interestInBase = (interestFor[i] * distributable) / sumOfInterests;
                 uint256 minPaidInterest = vault.getTokenOut(interestInBase);
                 vault.payInterest{value: interestInBase}(minPaidInterest);
             }
 
             emit Accrue(msg.sender, 0, totalAmount);
         }
-        // 2-(2)
+        // 2-(2): reward to repay interest for vaults is sufficient.
         else {
             uint256 distributed = reserved;
 
-            // calculate bonus reward for Vaults
-            uint256 totalVaultReward = ((distributable - sumOfInterests) *
-                vaultRewardBps) / 1E4;
-            for (uint256 i = 0; i < vaultsLength; i++) {
-                // kor) 각 vault별 bonus양은 각 vault가 받는 이자수익의 양에 비례한다.
-                // assert sumOfInterests > 0
-                uint256 interestWithReward = interestFor[i] +
-                    ((totalVaultReward * interestFor[i]) / sumOfInterests);
+            // Vault 에 추가적으로 지급하는 Staking Reward (상황에 따라 추가 Incentive 가 없을 수 있음 % 로 조절함)
+            uint256 additonalRewardForVaults = ((distributable - sumOfInterests) * vaultRewardBps) / 1E4;
+            for (uint256 i = 0; i < vaults.length; i++) {
+                    
+                uint256 interestWithReward = interestFor[i] + ((additonalRewardForVaults * interestFor[i]) / sumOfInterests);
                 // value: accumulated interest + bonus reward
-                IVault(vaults[i]).payInterest{value: interestWithReward}(
-                    IVault(vaults[i]).accInterest()
-                );
+                IVault(vaults[i]).payInterest{value: interestWithReward}(IVault(vaults[i]).accInterest());
                 distributed += interestWithReward;
             }
-
+            
             uint256 accrued = msg.value - distributed;
+
             if (accrued > 0) {
                 totalAmount += accrued;
                 SafeToken.safeTransferEVMOS(msg.sender, accrued);
@@ -604,15 +593,20 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /***********************
      * Private Functions *
      ************************/
-    
-    // TODO 매출 클레임 처리를 다른 컨트랙트에 하는게 어떨지?
-    function claimReserves(address token, uint256 amount) external onlyOwner {
-        if (token == address(0)) {
-            SafeToken.safeTransferEVMOS(owner(), amount);
-        } else {
-            SafeToken.safeTransfer(token, owner(), amount);
+
+    function _calculateInterestForVaults()
+        private
+        view
+        returns (uint256 _sumOfInterests, uint256[] memory interestFor)
+    {
+        _sumOfInterests = 0;
+        interestFor = new uint256[](vaults.length);
+        for (uint256 i = 0; i < vaults.length; i++) {
+            interestFor[i] = IVault(vaults[i]).getInterestInBase();
+            _sumOfInterests += interestFor[i];
         }
     }
+
 
     function _stake(Position storage p, uint256 amount)
         private
@@ -644,7 +638,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 repaidDebt,
         uint256 fee
     ) private {
-        
+
         uint256 share = amountToShare(amount);
 
         p.share -= share;
@@ -732,10 +726,10 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
      * Util Functions *
      *******************/
     /// @notice 유저는 예치하는 시점에 (예치 금액 / totalAmount) * totalShare 에 해당하는 share를 받음.
-    function amountToShare(uint256 amount) 
-        public 
-        view 
-        returns (uint256) 
+    function amountToShare(uint256 amount)
+        public
+        view
+        returns (uint256)
     {
         return (totalAmount == 0) ? amount : (totalShare * amount) / totalAmount;
     }
@@ -746,6 +740,15 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function abs(int256 x) private pure returns (int256) {
         return x >= 0 ? x : -x;
+    }
+
+    // TODO 매출 클레임 처리를 다른 컨트랙트에 하는게 어떨지?
+    function claimReserves(address token, uint256 amount) external onlyOwner {
+        if (token == address(0)) {
+            SafeToken.safeTransferEVMOS(owner(), amount);
+        } else {
+            SafeToken.safeTransfer(token, owner(), amount);
+        }
     }
 
     /// @dev Fallback function to accept EVMOS.

@@ -26,7 +26,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
     event Withdraw(address user, uint256 amount, uint256 share);
     event Loan(address user, uint256 debtAmount);
     event Repay(address user, uint256 debtAmount);
-    event PayInterest(uint256 paidInterest, uint256 reward);
+    event PayInterest(uint256 paidInterest, uint256 remained, uint256 insufficient);
     event TransferDebtOwnership(address from, address to, uint256 amount);
     event UtilizationRate(uint256 rateBps);
     event RepayPendingDebt(address user, uint256 amount, uint256 pendingDebt, uint256 pendingDebtInBase, uint256 remained);
@@ -483,16 +483,13 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         lastPaid.timestamp = uint128(block.timestamp);
         lastPaid.reward = paidInterest;
 
-        if (paidInterest > accInterest) {
-            // reward = paidInterest - accInterest
-            emit PayInterest(accInterest, paidInterest - accInterest);
-
-            accInterest = 0;
-        } else {
-            accInterest -= paidInterest;
-            emit PayInterest(paidInterest, 0);
-        }
-        // accInterest = 0;
+        emit PayInterest(
+            paidInterest, 
+            paidInterest > accInterest ? paidInterest - accInterest : 0, 
+            accInterest > paidInterest ? accInterest - paidInterest : 0
+        );
+        // 부족하든 부족하지 않든 이자를 지급하고 축적된 Vault 의 accInterest 는 0 으로 초기화 하여 Epoch 마다 Reset 함
+        accInterest = 0;
     }
 
     /// @dev pending repay debt because of EVMOS Unstaking's 14 days lock.
