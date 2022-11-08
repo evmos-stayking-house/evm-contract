@@ -428,6 +428,7 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
         _repay(user, amount);
     }
 
+    /// @dev partial close 기능인데 일단 현재는 add equity/debt 만 가능한 구조이므로 deprecated 함
     /// @dev repay debt for Base token(EVMOS).
     /// @param user debt owner
     /// @param minRepaid  minimum repaid debtToken amonut
@@ -549,18 +550,21 @@ contract Vault is IVault, ERC20Upgradeable, OwnableUpgradeable {
 
         if (msg.value > pendingDebtInBase) {
             _swapFromBase(pendingDebtInBase, pendingDebt);
-            pendingDebtShareOf[user] = 0;
             // return remained EVMOS
             remained = msg.value - pendingDebtInBase;
             SafeToken.safeTransferEVMOS(msg.sender, remained);
         } else {
-            uint256 repaidDebtAmount = _swapFromBase(msg.value, 1);
-            uint256 repaidDebtShare = pendingDebtAmountToShare(
-                repaidDebtAmount
-            );
-            pendingDebtShareOf[user] -= repaidDebtShare;
+            /**
+             * @dev unbonding 이후 빚보다 EVMOS 수량이 적을 때 share 에서 차감하는 방식이었는데
+             *      프로토콜에 손해가 있더라도 무조건 유저의 pending debt share 를 0 으로 초기화 하는 게 더 나음
+             *      청산 임계치 killFactor 를 조절하는 것이 더 나음 ( 현재 75 % )
+             **/
+            // uint256 repaidDebtAmount = _swapFromBase(msg.value, 1);
+            // uint256 repaidDebtShare = pendingDebtAmountToShare(repaidDebtAmount);
+            // pendingDebtShareOf[user] -= repaidDebtShare;
             remained = 0;
         }
+        pendingDebtShareOf[user] = 0;
 
         emit RepayPendingDebt(user, msg.value, pendingDebt, pendingDebtInBase, remained);
     }

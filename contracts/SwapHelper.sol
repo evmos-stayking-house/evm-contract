@@ -49,6 +49,7 @@ contract SwapHelper is ISwapHelper {
         // if tokenY == address(0) too, swapExactETHForTokens will be reverted.
         if (tokenX == address(0)) {
             require(dx == msg.value, 'exchange: invalid msg.value');
+
             path[0] = router.WETH();
             path[1] = tokenY;
 
@@ -56,41 +57,31 @@ contract SwapHelper is ISwapHelper {
                 minDy,
                 path,
                 msg.sender,
-                block.timestamp + 600 // 10 minutes
+                block.timestamp + 600 // 10 minutes, 수치는 조절해야 함
             );
 
             return amounts[1];
         }
-        /// @dev msg.sender should approve this helper contract first
         else {
+            /// @dev msg.sender should approve this helper contract first
             SafeToken.safeTransferFrom(tokenX, msg.sender, address(this), dx);
 
             SafeToken.safeApprove(tokenX, address(router), dx);
 
             path[0] = tokenX;
+            path[1] = router.WETH();
 
-            if (tokenY == address(0)) {
-                path[1] = router.WETH();
-
-                amounts = router.swapExactTokensForETH(
-                    dx,
-                    minDy,
-                    path,
-                    msg.sender,
-                    block.timestamp + 600 // 10 minutes
-                );
-            } else {
-                path[1] = tokenY;
-                amounts = router.swapExactTokensForTokens(
-                    dx,
-                    minDy,
-                    path,
-                    msg.sender,
-                    block.timestamp + 600 // 10 minutes
-                );
-            }
+            amounts = router.swapExactTokensForETH(
+                dx,
+                minDy,
+                path,
+                msg.sender,
+                block.timestamp + 600 // 10 minutes, 수치는 조절해야 함
+            );
 
             return amounts[1];
         }
     }
+
+    
 }
