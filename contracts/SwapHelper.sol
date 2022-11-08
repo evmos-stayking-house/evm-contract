@@ -9,7 +9,7 @@ contract SwapHelper is ISwapHelper {
     IUniswapV2Router public router;
 
     constructor(address _router) {
-        router = IUniswapV2Router(payable(_router));
+        router = IUniswapV2Router(_router);
     }
 
     function getDy(

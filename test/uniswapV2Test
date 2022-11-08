@@ -1,3 +1,0 @@
-const UniswapV2Factory = '';
-
-describe('초기화 : ', async () => {});
