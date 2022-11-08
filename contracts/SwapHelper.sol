@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 import './interface/ISwapHelper.sol';
 import './interface/swap/v2-periphery/IUniswapV2Router.sol';
+import './interface/swap/core/IUniswapV2Pair.sol';
 import './lib/utils/SafeToken.sol';
 
 contract SwapHelper is ISwapHelper {
@@ -83,5 +84,21 @@ contract SwapHelper is ISwapHelper {
         }
     }
 
-    
+    function getSlippageFactorsFrom(
+        address _pair, 
+        uint amountTokenA
+    ) 
+        public 
+        view 
+        returns (uint, uint, uint, uint32) 
+    {
+        (uint reserve0, uint reserve1, uint32 blockTimestampLast) = IUniswapV2Pair(_pair).getReserves();
+        require(block.timestamp > blockTimestampLast, "timestamp is error");
+        require(reserve0 > 0 && reserve1 > 0, "Insufficient Liquidity for the pair input");
+
+        uint amountTokenB = router.quote(amountTokenA, reserve0, reserve1);
+        return (amountTokenB, reserve0, reserve1, blockTimestampLast);
+    }
+
+
 }
