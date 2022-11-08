@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 import './interface/ISwapHelper.sol';
-import './interface/IEvmoSwapRouter.sol';
+import './interface/swap/v2-periphery/IUniswapV2Router.sol';
+import './interface/swap/core/IUniswapV2Pair.sol';
 import './lib/utils/SafeToken.sol';
 
-contract EvmoSwapHelper is ISwapHelper {
-    IEvmoSwapRouter public router;
+contract SwapHelper is ISwapHelper {
+    IUniswapV2Router public router;
 
-    constructor(address router_) {
-        router = IEvmoSwapRouter(payable(router_));
+    constructor(address _router) {
+        router = IUniswapV2Router(payable(_router));
     }
 
     function getDy(
@@ -49,6 +50,7 @@ contract EvmoSwapHelper is ISwapHelper {
         // if tokenY == address(0) too, swapExactETHForTokens will be reverted.
         if (tokenX == address(0)) {
             require(dx == msg.value, 'exchange: invalid msg.value');
+
             path[0] = router.WETH();
             path[1] = tokenY;
 
@@ -56,41 +58,47 @@ contract EvmoSwapHelper is ISwapHelper {
                 minDy,
                 path,
                 msg.sender,
-                block.timestamp + 600 // 10 minutes
+                block.timestamp + 600 // 10 minutes, 수치는 조절해야 함
             );
 
             return amounts[1];
         }
-        /// @dev msg.sender should approve this helper contract first
         else {
+            /// @dev msg.sender should approve this helper contract first
             SafeToken.safeTransferFrom(tokenX, msg.sender, address(this), dx);
 
             SafeToken.safeApprove(tokenX, address(router), dx);
 
             path[0] = tokenX;
+            path[1] = router.WETH();
 
-            if (tokenY == address(0)) {
-                path[1] = router.WETH();
-
-                amounts = router.swapExactTokensForETH(
-                    dx,
-                    minDy,
-                    path,
-                    msg.sender,
-                    block.timestamp + 600 // 10 minutes
-                );
-            } else {
-                path[1] = tokenY;
-                amounts = router.swapExactTokensForTokens(
-                    dx,
-                    minDy,
-                    path,
-                    msg.sender,
-                    block.timestamp + 600 // 10 minutes
-                );
-            }
+            amounts = router.swapExactTokensForETH(
+                dx,
+                minDy,
+                path,
+                msg.sender,
+                block.timestamp + 600 // 10 minutes, 수치는 조절해야 함
+            );
 
             return amounts[1];
         }
     }
+
+    function getSlippageFactorsFrom(
+        address _pair, 
+        uint amountTokenA
+    ) 
+        public 
+        view 
+        returns (uint, uint, uint, uint32) 
+    {
+        (uint reserve0, uint reserve1, uint32 blockTimestampLast) = IUniswapV2Pair(_pair).getReserves();
+        require(block.timestamp > blockTimestampLast, "timestamp is error");
+        require(reserve0 > 0 && reserve1 > 0, "Insufficient Liquidity for the pair input");
+
+        uint amountTokenB = router.quote(amountTokenA, reserve0, reserve1);
+        return (amountTokenB, reserve0, reserve1, blockTimestampLast);
+    }
+
+
 }

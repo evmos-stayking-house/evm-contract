@@ -155,6 +155,7 @@ contract Stayking is IStayking, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
 
         tokenToVault[token] = vault;
+        
         // push null position
         positions[vault].push(Position({user: address(0), share: 0}));
 
