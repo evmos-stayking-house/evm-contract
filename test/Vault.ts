@@ -6,7 +6,10 @@ import { ethers } from 'hardhat';
 import { before } from 'mocha';
 import { deployInterestModel } from '../scripts/deploy/setup/interestModel';
 import { deployStayKing } from '../scripts/deploy/setup/stayKing';
-import { deploySwapHelper } from '../scripts/deploy/setup/swapHelper';
+import {
+    deployMockSwapHelper,
+    deploySwapHelper,
+} from '../scripts/deploy/setup/swapHelper';
 import { deployToken, mintToken } from '../scripts/deploy/setup/token';
 import { deployVault } from '../scripts/deploy/setup/vault';
 import { ERC20Ownable, MockSwap, Stayking, Vault } from '../typechain-types';
@@ -237,7 +240,7 @@ async function deployContracts(vaultTokenSymbol: string) {
     );
 
     // 2. MockSwap 배포
-    const mockSwapDeployedResult = await deploySwapHelper(deployer, [
+    const mockSwapDeployedResult = await deployMockSwapHelper(deployer, [
         ethers.constants.AddressZero,
         tokenDeployedResult.address,
     ]);

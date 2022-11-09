@@ -24,14 +24,14 @@ const config: HardhatUserConfig = {
         localhost: {
             url: 'http://127.0.0.1:8545',
         },
-        // ropsten: {
-        //     url: 'https://ropsten.infura.io/v3/bcba6eed64684c77a045bc826d8ed802',
-        //     accounts: [process.env.DEPLOYER_PRIVATE_KEY!],
-        // },
         testnet: {
             chainId: 9000,
-            url: 'http://65.108.225.158:8545', // 자체적으로 운영중인 State-Sync 노드
-            // accounts: [process.env.DEPLOYER_PRIVATE_KEY!],
+            // url: 'http://65.108.225.158:8545', // 자체적으로 운영중인 State-Sync 노드
+            url: 'https://eth.bd.evmos.dev:8545',
+            accounts: [
+                process.env.DEPLOYER_PRIVATE_KEY!,
+                process.env.STAKER_PRIVATE_KEY!,
+            ],
         },
     },
 };

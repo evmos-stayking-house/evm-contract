@@ -4,7 +4,7 @@ import { DeployedContractAddress } from '../../config/constants/interfaces';
 import { toBN } from '../../utils';
 import { deployInterestModel } from './setup/interestModel';
 import { deployStayKing } from './setup/stayKing';
-import { deploySwapHelper } from './setup/swapHelper';
+import { deployMockSwapHelper } from './setup/swapHelper';
 import { deployToken, mintToken } from './setup/token';
 import { deployUnbondedEvmos } from './setup/UnbondedEvmos';
 import { deployVault } from './setup/vault';
@@ -17,7 +17,7 @@ export async function deployLocal(): Promise<DeployedContractAddress> {
     const tUSDC = await deployToken(deployer, 'USDC', 'tUSDC');
 
     // 2. Deploy MockSwap & MockSwapHelper
-    const swapHelper = await deploySwapHelper(deployer, [
+    const swapHelper = await deployMockSwapHelper(deployer, [
         ethers.constants.AddressZero,
         tUSDC.address,
     ]);

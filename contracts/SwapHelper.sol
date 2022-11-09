@@ -9,7 +9,7 @@ contract SwapHelper is ISwapHelper {
     IUniswapV2Router public router;
 
     constructor(address _router) {
-        router = IUniswapV2Router(payable(_router));
+        router = IUniswapV2Router(_router);
     }
 
     function getDy(
@@ -84,21 +84,26 @@ contract SwapHelper is ISwapHelper {
         }
     }
 
-    function getSlippageFactorsFrom(
+    function getPriceImpactFactorsFrom(
         address _pair, 
-        uint amountTokenA
+        uint _token0Amount,
+        uint _token1Amount
     ) 
         public 
         view 
-        returns (uint, uint, uint, uint32) 
+        returns (uint token0Amount, uint token1Amount, uint reserve0, uint reserve1, uint32 blockTimestampLast) 
     {
-        (uint reserve0, uint reserve1, uint32 blockTimestampLast) = IUniswapV2Pair(_pair).getReserves();
+        (reserve0, reserve1, blockTimestampLast) = IUniswapV2Pair(_pair).getReserves();
         require(block.timestamp > blockTimestampLast, "timestamp is error");
         require(reserve0 > 0 && reserve1 > 0, "Insufficient Liquidity for the pair input");
 
-        uint amountTokenB = router.quote(amountTokenA, reserve0, reserve1);
-        return (amountTokenB, reserve0, reserve1, blockTimestampLast);
+        if(_token1Amount == 0) {
+            token0Amount = _token0Amount;
+            token1Amount = router.quote(_token0Amount, reserve0, reserve1);
+        } else {
+            token0Amount = router.quote(_token1Amount, reserve1, reserve0);
+            token1Amount = _token1Amount;
+        }
     }
-
 
 }
